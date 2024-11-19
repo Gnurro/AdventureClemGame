@@ -9,7 +9,10 @@ with open("pddl_actions.lark") as grammar_file:
 
 parser = Lark(action_grammar, start="action")
 
-with open("test_pddl_actions.txt") as action_file:
+# test_pddl = "test_pddl_actions.txt"
+test_pddl = "test_pddl_actions1.txt"
+
+with open(test_pddl) as action_file:
     action_raw = action_file.read()
 
 
@@ -24,7 +27,7 @@ class PDDLActionTransformer(Transformer):
     constant/type/default term string.
     """
     def action(self, content):
-        print("action cont:", content)
+        # print("action cont:", content)
 
         # action_def_dict = {'action_name': content[1].value, 'content': content[3:]}
         action_def_dict = {'action_name': content[1].value}
@@ -48,7 +51,7 @@ class PDDLActionTransformer(Transformer):
         # action_type = action.data  # main grammar rule the input was parsed as
         # action_content = action.children  # all parsed arguments of the action 'VP'
 
-        print("action returns:", action_def_dict)
+        # print("action returns:", action_def_dict)
         return action_def_dict
         # return content
         # pass
@@ -199,5 +202,40 @@ pddl_transformer = PDDLActionTransformer()
 
 action_def = pddl_transformer.transform(parsed_action)
 
-print(action_def)
+# print(action_def)
+
+def pretty_action(action: dict):
+    for key, value in action.items():
+        print(key, value)
+
+# pretty_action(action_def)
+
+# PROCESSING
+
+
+class TestIF:
+    def __init__(self, action_raw: str):
+        self.action_types = dict()
+
+        self.action_parser = Lark(action_grammar, start="action")
+        parsed_action = self.action_parser.parse(action_raw)
+
+        self.action_transformer = PDDLActionTransformer()
+        action_def = self.action_transformer.transform(parsed_action)
+
+        self.action_types[action_def['action_name'].lower()] = dict()
+        for action_attribute in action_def:
+            if not action_attribute == 'action_name':
+                self.action_types[action_def['action_name'].lower()][action_attribute] = action_def[action_attribute]
+
+        print(self.action_types)
+
+
+test_interpreter = TestIF(action_raw)
+
+
+action_input = {'type': "go", 'arg1': "kitchen"}
+
+starting_state = {"at(player1,hallway1)", "room(hallway1,hallway)", "room(kitchen1,kitchen)", "exit(kitchen1,hallway1)",
+                  "exit(hallway1,kitchen1)"}
 
