@@ -1,0 +1,22 @@
+[
+  {
+    "type_name": "plest",
+    "lark": "plest: PLEST thing\nPLEST.1: \"plest\" WS",
+    "object_post_state": "urked(THING)",
+    "state_changes": [
+      {"pre_state": "hagin(THING)", "conditions": ["hagin(THING)"], "post_state": "urked(THING)"}
+    ],
+    "feedback_template": "The {{ thing }} is now urked.",
+    "asp": "{ action_t(TURN,plest,THING):at_t(TURN,THING,ROOM),hagin_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nurked_t(TURN+1,THING) :- action_t(TURN,plest,THING).\nurked_t(TURN+1,THING) :- turn(TURN), urked_t(TURN,THING), not action_t(TURN,sparn,THING)."
+  },
+  {
+    "type_name": "sparn",
+    "lark": "sparn: SPARN thing\nSPARN.1: \"sparn\" WS",
+    "object_post_state": "hagin(THING)",
+    "state_changes": [
+      {"pre_state": "urked(THING)", "conditions": ["urked(THING)"], "post_state": "hagin(THING)"}
+    ],
+    "feedback_template": "The {{ thing }} is now hagin.",
+    "asp": "{ action_t(TURN,sparn,THING):at_t(TURN,THING,ROOM),urked_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nhagin_t(TURN+1,THING) :- action_t(TURN,sparn,THING).\nhagin_t(TURN+1,THING) :- turn(TURN), hagin_t(TURN,THING), not action_t(TURN,plest,THING)."
+  }
+]

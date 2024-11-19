@@ -1,0 +1,36 @@
+[
+  {
+    "goal": "Put a sandwich on the table.",
+    "first_room": "You are in the kitchen. There is a refrigerator, a counter and a table. The refrigerator is closed.",
+    "initial_state": [
+      "room(kitchen1,kitchen)", "exit(kitchen1,pantry1)",
+      "room(pantry1,pantry)", "exit(pantry1,kitchen1)",
+      "type(player1,player)", "at(player1,kitchen1)",
+      "type(fridge1,refrigerator)", "at(fridge1,kitchen1)", "closed(fridge1)", "adj(fridge1,large)",
+      "type(table1,table)", "at(table1,kitchen1)", "adj(table1,wooden)",
+      "type(counter1,counter)", "at(counter1,kitchen1)",
+      "type(sandwich1,sandwich)", "at(sandwich1,kitchen1)", "in(sandwich1,fridge1)"
+    ],
+    "goal_state": [
+      "on(sandwich1,table1)"
+    ],
+    "max_turns": 10
+  },
+  {
+    "goal": "Put a sandwich on the counter.",
+    "first_room": "You are in the kitchen. There is a refrigerator, a counter and a table. The refrigerator is closed.",
+    "initial_state": [
+      "room(kitchen1,kitchen)", "exit(kitchen1,pantry1)",
+      "room(pantry1,pantry)", "exit(pantry1,kitchen1)",
+      "type(player1,player)", "at(player1,kitchen1)",
+      "type(fridge1,refrigerator)", "at(fridge1,kitchen1)", "closed(fridge1)", "adj(fridge1,large)",
+      "type(table1,table)", "at(table1,kitchen1)", "adj(table1,wooden)",
+      "type(counter1,counter)", "at(counter1,kitchen1)",
+      "type(sandwich1,sandwich)", "at(sandwich1,kitchen1)", "in(sandwich1,fridge1)"
+    ],
+    "goal_state": [
+      "on(sandwich1,counter1)"
+    ],
+    "max_turns": 10
+  }
+]

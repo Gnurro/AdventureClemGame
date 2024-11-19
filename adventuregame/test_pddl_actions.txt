@@ -1,0 +1,15 @@
+(:action BUILD-WALL
+        :parameters (?s - site ?b - bricks)
+        :precondition (and
+            (on-site ?b ?s)
+            (foundations-set ?s)
+            (not (walls-built ?s))
+            (not (material-used ?b))
+            (= ?b ?s)
+        )
+        :effect (and
+            (walls-built ?s)
+            (material-used ?b)
+        )
+
+    )

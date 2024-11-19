@@ -1,0 +1,36 @@
+%import common.WORD
+%import common.WS
+%import common.NUMBER
+
+action: "(:action" WS WORDP WS+ parameters precondition effect ")"
+
+parameters: ":parameters" WS (type_list | pred) WS+
+precondition: ":precondition" WS (andp | orp) WS+
+effect: ":effect" WS andp WS+
+
+andp: ANDL WS+ ((type_list | pred | notp | forall | equal) WS*)+ ")" WS*
+ANDL.1: "(and"
+
+orp: ORL WS+ ((type_list | pred | notp | forall | equal) WS*)+ ")" WS*
+ORL.1: "(or"
+
+notp: NOTL WS+ pred ")"
+NOTL.1: "(not"
+
+forall: FORALLL WS+ (type_list | pred)+ WS* (when | andp) ")"
+FORALLL.1: "(forall"
+when: WHENL WS+ andp WS+ andp ")" WS*
+WHENL.1: "(when"
+
+type_list: "(" type_list_item+ ")"
+type_list_item: (var WS | WORDP WS)+ DASH WS WORDP WS*
+
+DASH: "-"
+UNDERSCORE: "_"
+WORDP: WORD (DASH | UNDERSCORE | WORD | NUMBER)*
+
+var: "?" WORDP
+pred: "(" (WORDP | var) WS* (WORDP WS* | var WS*)* ")"
+
+equal: EQL WS (WORDP | var) WS (WORDP | var) ")"
+EQL.1: "(="

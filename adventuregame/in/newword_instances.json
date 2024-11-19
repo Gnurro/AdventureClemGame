@@ -1,0 +1,249 @@
+{
+  "experiments": [
+    {
+      "name": "newwords_prototype",
+      "game_instances": [
+        {
+          "game_id": 0,
+          "variant": "newwords_prototype",
+          "prompt": "You are playing a text adventure game. I will describe what you can perceive in the game. You write the single action you want to take in the game starting with >. Only reply with an action.\nFor example:\n> open cupboard\n\nYour goal for this game is: Sparn the zurk and plest the farnitz.\n\n",
+          "initial_state": [
+            "at(skoopa1floor,skoopa1)",
+            "at(skoon1,skoopa1)",
+            "at(zurk1,skoopa1)",
+            "at(farnitz1,skoopa1)",
+            "at(player1,skoopa1)",
+            "type(skoopa1floor,floor)",
+            "type(player1,player)",
+            "type(skoon1,skoon)",
+            "type(zurk1,zurk)",
+            "type(farnitz1,farnitz)",
+            "room(skoopa1,skoopa)",
+            "support(skoopa1floor)",
+            "support(skoon1)",
+            "on(zurk1,skoon1)",
+            "on(farnitz1,skoon1)",
+            "urked(zurk1)",
+            "hagin(farnitz1)",
+            "takeable(zurk1)",
+            "takeable(farnitz1)",
+            "movable(zurk1)",
+            "movable(farnitz1)",
+            "needs_support(zurk1)",
+            "needs_support(farnitz1)"
+          ],
+          "goal_state": [
+            "hagin(zurk1)",
+            "urked(farnitz1)"
+          ],
+          "max_turns": 50,
+          "optimal_turns": 2,
+          "optimal_solution": [
+            [
+              "sparn",
+              "zurk1"
+            ],
+            [
+              "plest",
+              "farnitz1"
+            ]
+          ],
+          "optimal_commands": [
+            "sparn zurk",
+            "plest farnitz"
+          ],
+          "action_definitions": [
+            "basic_actions.json",
+            "newword_actions.json"
+          ],
+          "room_definitions": [
+            "newword_rooms.json"
+          ],
+          "entity_definitions": [
+            "newword_entities.json"
+          ]
+        },
+        {
+          "game_id": 1,
+          "variant": "newwords_prototype",
+          "prompt": "You are playing a text adventure game. I will describe what you can perceive in the game. You write the single action you want to take in the game starting with >. Only reply with an action.\nFor example:\n> open cupboard\n\nYour goal for this game is: Sparn the farnitz and plest the zurk.\n\n",
+          "initial_state": [
+            "at(skoopa1floor,skoopa1)",
+            "at(skoon1,skoopa1)",
+            "at(player1,skoopa1)",
+            "at(zurk1,skoopa1)",
+            "at(farnitz1,skoopa1)",
+            "type(skoopa1floor,floor)",
+            "type(player1,player)",
+            "type(skoon1,skoon)",
+            "type(zurk1,zurk)",
+            "type(farnitz1,farnitz)",
+            "room(skoopa1,skoopa)",
+            "support(skoopa1floor)",
+            "support(skoon1)",
+            "on(zurk1,skoon1)",
+            "on(farnitz1,skoon1)",
+            "urked(farnitz1)",
+            "hagin(zurk1)",
+            "takeable(zurk1)",
+            "takeable(farnitz1)",
+            "movable(zurk1)",
+            "movable(farnitz1)",
+            "needs_support(zurk1)",
+            "needs_support(farnitz1)"
+          ],
+          "goal_state": [
+            "hagin(farnitz1)",
+            "urked(zurk1)"
+          ],
+          "max_turns": 50,
+          "optimal_turns": 2,
+          "optimal_solution": [
+            [
+              "sparn",
+              "farnitz1"
+            ],
+            [
+              "plest",
+              "zurk1"
+            ]
+          ],
+          "optimal_commands": [
+            "sparn farnitz",
+            "plest zurk"
+          ],
+          "action_definitions": [
+            "basic_actions.json",
+            "newword_actions.json"
+          ],
+          "room_definitions": [
+            "newword_rooms.json"
+          ],
+          "entity_definitions": [
+            "newword_entities.json"
+          ]
+        },
+        {
+          "game_id": 2,
+          "variant": "newwords_prototype",
+          "prompt": "You are playing a text adventure game. I will describe what you can perceive in the game. You write the single action you want to take in the game starting with >. Only reply with an action.\nFor example:\n> open cupboard\n\nYou can plest and sparn.\n\nYour goal for this game is: Make the zurk hagin and make the farnitz urked.\n\n",
+          "initial_state": [
+            "at(skoopa1floor,skoopa1)",
+            "at(skoon1,skoopa1)",
+            "at(zurk1,skoopa1)",
+            "at(farnitz1,skoopa1)",
+            "at(player1,skoopa1)",
+            "type(skoopa1floor,floor)",
+            "type(player1,player)",
+            "type(skoon1,skoon)",
+            "type(zurk1,zurk)",
+            "type(farnitz1,farnitz)",
+            "room(skoopa1,skoopa)",
+            "support(skoopa1floor)",
+            "support(skoon1)",
+            "on(zurk1,skoon1)",
+            "on(farnitz1,skoon1)",
+            "urked(zurk1)",
+            "hagin(farnitz1)",
+            "takeable(zurk1)",
+            "takeable(farnitz1)",
+            "movable(zurk1)",
+            "movable(farnitz1)",
+            "needs_support(zurk1)",
+            "needs_support(farnitz1)"
+          ],
+          "goal_state": [
+            "hagin(zurk1)",
+            "urked(farnitz1)"
+          ],
+          "max_turns": 50,
+          "optimal_turns": 2,
+          "optimal_solution": [
+            [
+              "sparn",
+              "zurk1"
+            ],
+            [
+              "plest",
+              "farnitz1"
+            ]
+          ],
+          "optimal_commands": [
+            "sparn zurk",
+            "plest farnitz"
+          ],
+          "action_definitions": [
+            "basic_actions.json",
+            "newword_actions.json"
+          ],
+          "room_definitions": [
+            "newword_rooms.json"
+          ],
+          "entity_definitions": [
+            "newword_entities.json"
+          ]
+        },
+        {
+          "game_id": 3,
+          "variant": "newwords_prototype",
+          "prompt": "You are playing a text adventure game. I will describe what you can perceive in the game. You write the single action you want to take in the game starting with >. Only reply with an action.\nFor example:\n> open cupboard\n\nYou can plest and sparn.\n\nYour goal for this game is: Make the farnitz hagin and make the zurk urked.\n\n",
+          "initial_state": [
+            "at(skoopa1floor,skoopa1)",
+            "at(skoon1,skoopa1)",
+            "at(zurk1,skoopa1)",
+            "at(farnitz1,skoopa1)",
+            "at(player1,skoopa1)",
+            "type(skoopa1floor,floor)",
+            "type(player1,player)",
+            "type(skoon1,skoon)",
+            "type(zurk1,zurk)",
+            "type(farnitz1,farnitz)",
+            "room(skoopa1,skoopa)",
+            "support(skoopa1floor)",
+            "support(skoon1)",
+            "on(zurk1,skoon1)",
+            "on(farnitz1,skoon1)",
+            "urked(farnitz1)",
+            "hagin(zurk1)",
+            "takeable(zurk1)",
+            "takeable(farnitz1)",
+            "movable(zurk1)",
+            "movable(farnitz1)",
+            "needs_support(zurk1)",
+            "needs_support(farnitz1)"
+          ],
+          "goal_state": [
+            "hagin(farnitz1)",
+            "urked(zurk1)"
+          ],
+          "max_turns": 50,
+          "optimal_turns": 2,
+          "optimal_solution": [
+            [
+              "sparn",
+              "zurk1"
+            ],
+            [
+              "plest",
+              "farnitz1"
+            ]
+          ],
+          "optimal_commands": [
+            "sparn zurk",
+            "plest farnitz"
+          ],
+          "action_definitions": [
+            "basic_actions.json",
+            "newword_actions.json"
+          ],
+          "room_definitions": [
+            "newword_rooms.json"
+          ],
+          "entity_definitions": [
+            "newword_entities.json"
+          ]
+        }
+      ]
+    }
+  ]
+}

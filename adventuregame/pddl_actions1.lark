@@ -1,0 +1,12 @@
+%import common.WORD
+%import common.WS
+
+bp: "(" (WORD WS+)* (type_list WS* | var WS* | bp WS*)* WS* ")"
+type_list: type_list_item+
+type_list_item: (var WS | WORD WS)+ "-" WS WORD WS*
+var: "?" WORD
+pred: (WORD | var) WS* (WORD | var)* WS*
+
+defp: ":" WORD WS+ bp+
+
+action: "(" ":action" WS WORD WS+ (defp WS+)+ ")"

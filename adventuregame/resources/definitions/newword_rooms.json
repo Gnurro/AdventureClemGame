@@ -1,0 +1,9 @@
+[
+  {
+    "type_name": "skoopa",
+    "repr_str": "skoopa",
+    "standard_content": ["refrigerator", "counter", "table"],
+    "exit_targets": ["pantry", "livingroom", "hallway"],
+    "max_connections": 3
+  }
+]

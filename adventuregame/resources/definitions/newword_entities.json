@@ -1,0 +1,42 @@
+[
+  {
+    "type_name": "player",
+    "repr_str": "you",
+    "hidden": true
+  },
+  {
+    "type_name": "floor",
+    "repr_str": "floor",
+    "hidden": true,
+    "support": true,
+    "traits": ["support"]
+  },
+  {
+    "type_name": "skoon",
+    "repr_str": "skoon",
+    "support": true,
+    "traits": ["support"],
+    "possible_adjs": ["wooden", "metal", "low", "high"],
+    "standard_locations": ["kitchen", "livingroom"]
+  },
+  {
+    "type_name": "farnitz",
+    "repr_str": "farnitz",
+    "takeable": true,
+    "movable": true,
+    "supported": true,
+    "traits": ["takeable", "movable", "needs_support"],
+    "possible_adjs": ["large", "small"],
+    "standard_locations": ["livingroom", "hallway", "bedroom"]
+  },
+  {
+    "type_name": "zurk",
+    "repr_str": "zurk",
+    "takeable": true,
+    "movable": true,
+    "supported": true,
+    "traits": ["takeable", "movable", "needs_support"],
+    "possible_adjs": ["large", "small"],
+    "standard_locations": ["livingroom", "hallway", "bedroom"]
+  }
+]

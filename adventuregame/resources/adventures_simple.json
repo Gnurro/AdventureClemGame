@@ -1,0 +1,10 @@
+[
+  {
+    "goal": "Put a sandwich on the table.",
+    "first_room": "You are in the kitchen. There is a refrigerator, a counter and a table. The refrigerator is closed."
+  },
+  {
+    "goal": "Put a sandwich on the counter.",
+    "first_room": "You are in the kitchen. There is a refrigerator, a counter and a table. The refrigerator is closed."
+  }
+]
