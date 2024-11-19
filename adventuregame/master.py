@@ -1,18 +1,20 @@
+import os
+
 from typing import List, Dict, Tuple
 
-from backends import Model
-from clemgame import file_utils
-import clemgame.metrics as metrics
-from clemgame.clemgame import GameMaster, GameBenchmark, GameScorer, DialogueGameMaster, Player
-from clemgame import get_logger
+from clemcore.backends import Model
+from clemcore.utils import file_utils
+import clemcore.clemgame.metrics as metrics
+from clemcore.clemgame import GameMaster, GameBenchmark, GameScorer, DialogueGameMaster, Player
+
+import logging
 
 import numpy as np
 
-from games.adventuregame.if_wrapper import AdventureIFInterpreter
+from if_wrapper import AdventureIFInterpreter
 
 
-GAME_NAME = "adventuregame"
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class AdventureGameMaster(DialogueGameMaster):
@@ -21,8 +23,8 @@ class AdventureGameMaster(DialogueGameMaster):
     Runs the benchmark by prompting the model and passing model outputs to the IF interpreter.
     Handles prompted format adherence checks and creates episode records.
     """
-    def __init__(self, experiment: Dict, player_models: List[Model]):
-        super().__init__(GAME_NAME, experiment, player_models)
+    def __init__(self, game_name: str, game_path: str, experiment: Dict, player_models: List[Model]):
+        super().__init__(game_name, game_path, experiment, player_models)
         self.turns = []
         self.success = True
         self.invalid_format: str = ""  # to track responses with invalid format
@@ -225,8 +227,8 @@ class AdventureGameScorer(GameScorer):
     GameScorer subclass for AdventureGame.
     Reads episode records, counts failures, calculates scores and stores the results in score files.
     """
-    def __init__(self, name: str, experiment: Dict, game_instance: Dict):
-        super().__init__(name, experiment, game_instance)
+    def __init__(self, game_name: str, experiment: Dict, game_instance: Dict):
+        super().__init__(game_name, experiment, game_instance)
 
     def compute_scores(self, episode_interactions: Dict) -> None:
         """
@@ -438,14 +440,19 @@ class AdventureGameScorer(GameScorer):
 
 
 class AdventureGameBenchmark(GameBenchmark):
-    def __init__(self):
-        super().__init__(GAME_NAME)
+    def __init__(self, game_spec: GameSpec):
+        super().__init__(game_spec)
 
     def get_description(self):
         return "Interactive Fiction clemgame"
 
     def create_game_master(self, experiment: Dict, player_models: List[Model]) -> GameMaster:
-        return AdventureGameMaster(experiment, player_models)
+        return AdventureGameMaster(self.game_name, self.game_path, experiment, player_models)
 
     def create_game_scorer(self, experiment: Dict, game_instance: Dict) -> GameScorer:
-        return AdventureGameScorer(GAME_NAME, experiment, game_instance)
+        return AdventureGameScorer(self.game_name, experiment, game_instance)
+
+
+def main():
+    game_path = os.path.dirname(os.path.abspath(__file__))
+    experiments = file_utils.load_json("in/instances.json", game_path)

@@ -3,19 +3,19 @@ Generate instances for adventuregame.
 
 Creates files in ./in
 """
+import os
+
 from tqdm import tqdm
 
-import clemgame
-from clemgame.clemgame import GameInstanceGenerator
+import clemcore
+from clemcore.clemgame import GameInstanceGenerator
 
 logger = clemgame.get_logger(__name__)
-
-GAME_NAME = "adventuregame"
 
 
 class AdventureGameInstanceGenerator(GameInstanceGenerator):
     def __init__(self):
-        super().__init__(GAME_NAME)
+        super().__init__(os.path.dirname(os.path.abspath(__file__)))
 
     def on_generate(self, raw_adventures_file: str):
         """Generate both basic and planning variant instances from raw adventures.
