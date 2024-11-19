@@ -1,0 +1,11 @@
+[
+  {
+    "game_name": "adventuregame",
+    "game_path": "../AdventureClemGame/adventuregame",
+    "description": "Interactive fiction clemgame framework with basic home object delivery experiment.",
+    "main_game": "adventuregame",
+    "players": "one",
+    "image": "none",
+    "languages": ["en"]
+  }
+]
