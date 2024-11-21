@@ -1,0 +1,12 @@
+(:action CLOSE
+    :parameters (?e - openable ?r - room ?p - player)
+    :precondition (and
+        (at ?p ?r)
+        (at ?e ?r)
+        (open ?e)
+        )
+    :effect (and
+        (closed ?e)
+        (not (open ?e))
+    )
+)

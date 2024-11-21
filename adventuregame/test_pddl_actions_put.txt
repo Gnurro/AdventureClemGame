@@ -1,0 +1,32 @@
+(:action PUT
+    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)
+    :precondition (and
+        (at ?p ?r)
+        (at ?e ?r)
+        (at ?t ?r)
+        (or
+            (support ?t)
+            (and
+                (container ?t)
+                (open ?t)
+                )
+            )
+        )
+    :effect (and
+        (when
+            (and
+                (inventory ?i ?p)
+                (in ?e ?i)
+                )
+            (not (in ?e ?i))
+            )
+        (when
+            (support ?t)
+            (on ?e ?t)
+            )
+        (when
+            (container ?t)
+            (in ?e ?t)
+            )
+        )
+)

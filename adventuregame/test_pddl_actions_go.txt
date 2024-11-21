@@ -1,0 +1,24 @@
+(:action GO
+    :parameters (?c ?d - room ?p - player ?e - takeable ?i - inventory)
+    :precondition (and
+        (at ?p ?c)
+        (exit ?c ?d)
+        (not (at ?p ?d))
+        )
+    :effect (and
+        (at ?p ?d)
+        (not (at ?p ?c))
+        (forall (?e)
+            (when
+                (and
+                    (inventory ?i ?p)
+                    (in ?e ?i)
+                )
+                (and
+                    (at ?e ?d)
+                    (not (at ?e ?c))
+                )
+            )
+        )
+    )
+)

@@ -1,0 +1,27 @@
+(:action TAKE
+    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)
+    :precondition (and
+        (at ?p ?r)
+        (at ?e ?r)
+        (at ?s ?r)
+        (or
+            (and
+                (support ?s)
+                (on ?e ?s)
+                )
+            (and
+                (container ?s)
+                (open ?s)
+                (in ?e ?s)
+                )
+            )
+        )
+    :effect (and
+        (when
+            (inventory ?i ?p)
+            (in ?e ?i)
+            )
+        (not (on ?e ?s))
+        (not (in ?e ?s))
+    )
+)
