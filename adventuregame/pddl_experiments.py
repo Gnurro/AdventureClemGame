@@ -1,6 +1,7 @@
 import json
 import os
 from copy import deepcopy
+from typing import List, Set, Union
 
 import lark
 from lark import Lark, Transformer
@@ -16,7 +17,7 @@ with open("pddl_actions.lark") as grammar_file:
 action_parser = Lark(action_grammar, start="action")
 
 # test_pddl = "test_pddl_actions.txt"
-test_pddl = "test_pddl_actions1.txt"
+test_pddl = "test_pddl_actions_take.txt"
 
 with open(test_pddl) as action_file:
     action_raw = action_file.read()
@@ -236,6 +237,8 @@ class TestIF:
         self.action_types = dict()
         self.initialize_action_types()
 
+        # print(self.action_types)
+
         self.world_state: set = set()
         self.world_state_history: list = list()
         self.goal_state: set = set()
@@ -316,9 +319,6 @@ class TestIF:
         Load and process action types in this adventure.
         Definitions are loaded from external files.
         """
-
-        # TODO: read and parse PDDL action representation
-
         # load action type definitions in game instance:
         action_definitions: list = list()
         for action_def_source in self.game_instance["action_definitions"]:
@@ -337,10 +337,13 @@ class TestIF:
             cur_action_type = self.action_types[action_type]
 
             if 'pddl' in cur_action_type:
-                print(cur_action_type['pddl'])
+                # print(cur_action_type['pddl'])
                 parsed_action_pddl = action_parser.parse(cur_action_type['pddl'])
                 processed_action_pddl = action_def_transformer.transform(parsed_action_pddl)
-                print(processed_action_pddl)
+                # print(processed_action_pddl)
+                cur_action_type['interaction'] = processed_action_pddl
+            else:
+                raise KeyError
 
             # convert fact to change from string to tuple:
             # cur_action_type['object_post_state'] = fact_str_to_tuple(cur_action_type['object_post_state'])
@@ -384,7 +387,7 @@ class TestIF:
         # get entity instance types from world state:
         for fact in self.world_state:
             # entity instance to entity type mapping:
-            if fact[0] == 'type':
+            if fact[0] == 'type' or fact[0] == 'room':
                 self.inst_to_type_dict[fact[1]] = fact[2]
 
         # dict with the type for each room instance in the adventure:
@@ -421,10 +424,93 @@ class TestIF:
             self.goal_state.add(fact_str_to_tuple(fact_string))
         """
 
+    def get_player_room(self) -> str:
+        """
+        Get the current player location's internal room string ID.
+        """
+        for fact in self.world_state:
+            if fact[0] == 'at' and fact[1] == 'player1':
+                player_room = fact[2]
+                break
+
+        return player_room
+
+    def get_inventory_content(self, player: str = 'player1') -> list:
+        # single-player for now, so default to player1
+        inventory_content = list()
+        for fact in self.world_state:
+            if fact[0] == 'in' and fact[2] == 'inventory':
+                inventory_content.append(fact[1])
+
+        return inventory_content
+
+    # def check_predicate(self, ):
+
+    def resolve_action(self, action_dict: dict) -> [bool, Union[Set, str], Union[dict, Set]]:
+        print(action_dict)
+        # vars for keeping track:
+        state_changed = False  # main bool controlling final result world state fact set union/removal
+        facts_to_remove = list()  # facts to be removed by world state set removal
+        facts_to_add = list()  # facts to union with world state fact set
+        # get current action definition:
+        cur_action_def = self.action_types[action_dict['type']]['interaction']
+        # get current action PDDL parameter mapping:
+        cur_action_pddl_map = self.action_types[action_dict['type']]['pddl_parameter_mapping']
+        # pretty_action(cur_action_def)
+        # PARAMETERS
+        variable_map = dict()
+        parameters_base = cur_action_def['parameters']
+        # print(parameters_base)
+        # check that parameters key correctly contains a PDDL type_list:
+        if not 'type_list' in parameters_base:
+            raise KeyError
+        # get parameters list:
+        parameters = parameters_base['type_list']
+        for parameter in parameters:
+            print("\nparameter:", parameter)
+            cur_parameter_type = parameter['type_list_item']
+            # go over variables in parameter:
+            for variable in parameter['items']:
+                print("variable:", variable)
+                var_id = variable["variable"]
+                print("var_id:", var_id)
+                # use parameter mapping to resolve variable:
+                cur_var_map = cur_action_pddl_map[f'?{var_id}']
+                print("cur_var_map:", cur_var_map)
+                match cur_var_map:
+                    # assign action arguments:
+                    case 'arg1':
+                        variable_map[var_id] = action_dict['arg1']
+                    case 'arg2':
+                        variable_map[var_id] = action_dict['arg2']
+                    # assign default wildcards:
+                    case 'current_player_room':
+                        variable_map[var_id] = self.get_player_room()
+                    case 'current_player':
+                        # for now only single-player, so the current player is always player1:
+                        variable_map[var_id] = "player1"
+                    case 'current_player_inventory':
+                        # for now only single-player, so the current player inventory is always 'inventory':
+                        variable_map[var_id] = "inventory"
+                    case 'current_player_inventory_content':
+                        variable_map[var_id] = self.get_inventory_content()
+
+                # check type match:
+                # assume all world state instance IDs end in numbers:
+                if variable_map[var_id][-1] in ["0","1","2","3","4","5","6","7","8","9"]:
+                    var_type = self.inst_to_type_dict[variable_map[var_id]]
+                else:
+                    # assume that other strings are essentially type strings:
+                    var_type = variable_map[var_id]
+                print("var_type:", var_type)
+                # TODO: check for predicates to match
+
+        print("variable_map:", variable_map)
+
 
 
 test_instance = {"initial_state":
-                    {"type(player1,player)", "at(player1,hallway1)",
+                    {"type(player1,player)", "inventory(inventory1,player1)", "at(player1,hallway1)",
                     "room(hallway1,hallway)", "room(kitchen1,kitchen)",
                     "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
                     "type(sandwich1,sandwich)", "takeable(sandwich1)",
@@ -438,4 +524,4 @@ test_interpreter = TestIF(test_instance)
 
 action_input = {'type': "go", 'arg1': "kitchen"}
 
-
+test_interpreter.resolve_action(action_input)
