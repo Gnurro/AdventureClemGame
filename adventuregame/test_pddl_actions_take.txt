@@ -17,10 +17,7 @@
             )
         )
     :effect (and
-        (when
-            (inventory ?i ?p)
-            (in ?e ?i)
-            )
+        (in ?e ?i)
         (not (on ?e ?s))
         (not (in ?e ?s))
     )

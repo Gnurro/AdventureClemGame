@@ -10,10 +10,7 @@
         (not (at ?p ?c))
         (forall (?e)
             (when
-                (and
-                    (inventory ?i ?p)
-                    (in ?e ?i)
-                )
+                (in ?e ?i)
                 (and
                     (at ?e ?d)
                     (not (at ?e ?c))

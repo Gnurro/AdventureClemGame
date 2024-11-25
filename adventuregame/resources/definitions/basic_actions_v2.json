@@ -6,7 +6,7 @@
     "pddl_parameter_mapping": {
       "?e": "arg1",
       "?r": "current_player_room",
-      "?p": "current_player"
+      "?p": "player"
     },
     "failure_feedback": {
       "parameters": [
@@ -30,7 +30,7 @@
     "pddl_parameter_mapping": {
       "?e": "arg1",
       "?r": "current_player_room",
-      "?p": "current_player"
+      "?p": "player"
     },
     "failure_feedback": {
       "parameters": [
@@ -50,12 +50,12 @@
   {
     "type_name": "take",
     "lark": "take: TAKE PREP* thing (PREP thing)*\nTAKE.1: (\"take\" | \"grab\" | \"pick\" | \"get\") WS",
-    "pddl": "(:action TAKE\n    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?s ?r)\n        (or\n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (and\n                (container ?s)\n                (in ?e ?s)\n                (open ?s)\n                )\n            )\n        )\n    :effect (and\n        (when\n            (inventory ?i ?p)\n            (in ?e ?i)\n            )\n        (not (on ?e ?s))\n        (not (in ?e ?s))\n    )\n)",
+    "pddl": "(:action TAKE\n    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?s ?r)\n        (or\n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (and\n                (container ?s)\n                (open ?s)\n                (in ?e ?s)\n                )\n            )\n        )\n    :effect (and\n        (in ?e ?i)\n        (not (on ?e ?s))\n        (not (in ?e ?s))\n    )\n)",
     "pddl_parameter_mapping": {
       "?e": "arg1",
       "?s": "arg2",
-      "?p": "current_player",
-      "?i": "current_player_inventory",
+      "?p": "player",
+      "?i": "inventory",
       "?r": "current_player_room"
     },
     "failure_feedback": {
@@ -83,12 +83,12 @@
   {
     "type_name": "put",
     "lark": "put: PUT thing (\"back\" WS)* PREP* thing\nPUT.1: (\"put\" | \"leave\" | \"place\" | \"drop\") WS",
-    "pddl": "(:action PUT\n    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?t ?r)\n        (or\n            (support ?t)\n            (and\n                (container ?t)\n                (open ?t)\n                )\n            )\n        )\n    :effect (and\n        (when\n            (and\n                (inventory ?i ?p)\n                (in ?e ?i)\n                )\n            (not (in ?e ?i))\n            )\n        (when\n            (support ?t)\n            (on ?e ?t)\n            )\n        (when\n            (container ?t)\n            (in ?e ?t)\n            )\n        )\n)",
+    "pddl": "(:action PUT\n    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?t ?r)\n        (or\n            (support ?t)\n            (and\n                (container ?t)\n                (open ?t)\n                )\n            )\n        )\n    :effect (and\n        (not (in ?e ?i))\n        (when\n            (support ?t)\n            (on ?e ?t)\n            )\n        (when\n            (container ?t)\n            (in ?e ?t)\n            )\n        )\n)",
     "pddl_parameter_mapping": {
       "?e": "arg1",
       "?t": "arg2",
-      "?p": "current_player",
-      "?i": "current_player_inventory",
+      "?p": "player",
+      "?i": "inventory",
       "?r": "current_player_room"
     },
     "failure_feedback": {
@@ -118,9 +118,9 @@
     "pddl_parameter_mapping": {
       "?c": "current_player_room",
       "?d": "arg1",
-      "?p": "current_player",
-      "?e": "current_player_inventory_content",
-      "?i": "current_player_inventory"
+      "?p": "player",
+      "?e": "inventory_content",
+      "?i": "inventory"
     },
     "failure_feedback": {
       "parameters": [

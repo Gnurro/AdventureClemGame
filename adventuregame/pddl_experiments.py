@@ -358,7 +358,7 @@ class TestIF:
 
         # NOTE: The following world state augmentations are left in here to make manual adventure creation/modification
         # convenient. Initial adventure world states generated with the clingo adventure generator already cover these
-        # augmentations.
+        # augmentations. Due to the world state being a set of tuples, the augmentations done here simply unify.
 
         # facts to add are gathered in a set to prevent duplicates
         facts_to_add = set()
@@ -486,13 +486,13 @@ class TestIF:
                     # assign default wildcards:
                     case 'current_player_room':
                         variable_map[var_id] = self.get_player_room()
-                    case 'current_player':
+                    case 'player':
                         # for now only single-player, so the current player is always player1:
                         variable_map[var_id] = "player1"
-                    case 'current_player_inventory':
+                    case 'inventory':
                         # for now only single-player, so the current player inventory is always 'inventory':
                         variable_map[var_id] = "inventory"
-                    case 'current_player_inventory_content':
+                    case 'inventory_content':
                         variable_map[var_id] = self.get_inventory_content()
 
                 # check type match:
@@ -510,7 +510,7 @@ class TestIF:
 
 
 test_instance = {"initial_state":
-                    {"type(player1,player)", "inventory(inventory1,player1)", "at(player1,hallway1)",
+                    {"type(player1,player)", "at(player1,hallway1)",
                     "room(hallway1,hallway)", "room(kitchen1,kitchen)",
                     "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
                     "type(sandwich1,sandwich)", "takeable(sandwich1)",

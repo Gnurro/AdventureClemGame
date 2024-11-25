@@ -13,13 +13,7 @@
             )
         )
     :effect (and
-        (when
-            (and
-                (inventory ?i ?p)
-                (in ?e ?i)
-                )
-            (not (in ?e ?i))
-            )
+        (not (in ?e ?i))
         (when
             (support ?t)
             (on ?e ?t)
