@@ -1,0 +1,7 @@
+(define
+    (domain home)
+    (:types
+        kitchen pantry hallway livingroom broomcloset bedroom - room
+        player inventory floor table sidetable counter refrigerator cupboard wardrobe shelf freezer pottedplant chair bed couch broom mop sandwich apple banana orange peach plate book pillow - entity
+        )
+    )

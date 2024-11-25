@@ -8,6 +8,7 @@ from lark import Lark, Transformer
 
 from adv_util import fact_str_to_tuple, fact_tuple_to_str
 
+# PDDL ACTIONS
 
 with open("pddl_actions.lark") as grammar_file:
     action_grammar = grammar_file.read()
@@ -16,10 +17,10 @@ with open("pddl_actions.lark") as grammar_file:
 
 action_parser = Lark(action_grammar, start="action")
 
-# test_pddl = "test_pddl_actions.txt"
-test_pddl = "test_pddl_actions_take.txt"
+# test_pddl_action = "test_pddl_actions.txt"
+test_pddl_action = "test_pddl_actions_take.txt"
 
-with open(test_pddl) as action_file:
+with open(test_pddl_action) as action_file:
     action_raw = action_file.read()
 
 
@@ -148,8 +149,8 @@ class PDDLActionTransformer(Transformer):
             if 'variable' in item_element:
                 type_list_items.append(item_element)
             elif type(item_element) == lark.Token:
-                if item_element.type == "WORD":
-                    type_list_items.append(item_element)
+                if item_element.type == "WORDP":
+                    type_list_items.append(item_element.value)
                 elif item_element.type == "DASH":
                     break
 
@@ -217,6 +218,231 @@ def pretty_action(action: dict):
 
 # pretty_action(action_def)
 
+# PDDL DOMAIN
+# Partially using domain to make type inheritance work (for now)
+
+with open("pddl_domain.lark") as grammar_file:
+    domain_grammar = grammar_file.read()
+
+# print(domain_grammar)
+
+domain_parser = Lark(domain_grammar, start="define")
+
+test_pddl_domain = "test_pddl_domain.txt"
+
+with open(test_pddl_domain) as domain_file:
+    domain_raw = domain_file.read()
+
+
+parsed_domain = domain_parser.parse(domain_raw)
+
+# print(parsed_domain)
+
+
+class PDDLDomainTransformer(Transformer):
+    """PDDL domain definition transformer to convert Lark parse to python dict for further use.
+    Method names must match grammar rule names, thus some rules have an added -p to distinguish their name from a python
+    constant/type/default term string.
+    """
+    def define(self, content):
+        # print("define cont:", content)
+
+        # domain_def_dict = {'domain_name': content[1].value.lower()}
+        domain_def_dict = dict()
+
+        for cont in content:
+            # print(type(cont))
+            if type(cont) == lark.Token:
+                # print("lark token:", cont.type, cont.value)
+                pass
+            else:
+                # print("non-Token", cont)
+                if 'domain_id' in cont:
+                    domain_def_dict['domain_id'] = cont['domain_id']
+                if 'types' in cont:
+                    domain_def_dict['types'] = cont['types']
+
+        # action: lark.Tree = content[0]
+        # action_type = action.data  # main grammar rule the input was parsed as
+        # action_content = action.children  # all parsed arguments of the action 'VP'
+
+        # print("define returns:", domain_def_dict)
+        return domain_def_dict
+        # return content
+        # pass
+
+    def domain_id(self, content):
+        # print("domain_id cont:", content)
+        # print("domain_id return:", {'domain_id': content[-1].value})
+        return {'domain_id': content[-1].value}
+
+    def types(self, content):
+        # print("types cont:", content)
+        types_list = list()
+        for cont in content:
+            if 'type_list_item' in cont:
+                types_list.append(cont)
+        types_dict = dict()
+        for type_list in types_list:
+            # print(type_list)
+            types_dict[f'{type_list["type_list_item"]}'] = type_list['items']
+        # print("types return:", {'types': types_list})
+        return {'types': types_dict}
+
+    def type_list(self, content):
+        # print(content)
+        return {'type_list': content}
+
+    def type_list_item(self, content):
+        # print("type_list_item cont:", content)
+        type_list_items = list()
+        for item_element in content:
+            if 'variable' in item_element:
+                type_list_items.append(item_element)
+            elif type(item_element) == lark.Token:
+                if item_element.type == "WORDP":
+                    type_list_items.append(item_element.value)
+                elif item_element.type == "DASH":
+                    break
+
+        if content[-1].type == "WS":
+            cat_name = content[-2].value
+        else:
+            cat_name = content[-1].value
+        # print("type_list_item return:", {'type_list_item': cat_name, 'items': type_list_items})
+        return {'type_list_item': cat_name, 'items': type_list_items}
+
+
+    def parameters(self, content):
+        parameter_list = None
+        if type(content[0]) == lark.Token and content[0].type == "WS":
+            parameter_list = content[1]
+        # print("parameters:", parameter_list)
+
+        return {'parameters': parameter_list}
+
+    def precondition(self, content):
+        # print("precond cont:", content)
+        # print("precond cont:", content[1][1:])
+        return {'precondition': content[1:-1]}
+
+    def effect(self, content):
+        # print("effect cont:", content)
+        effect_dict = {'effect': content[1:-1]}
+        # print("effect returns:", effect_dict)
+        return effect_dict
+
+    def forall(self, content):
+        # print("forall cont:", content)
+        iterated_object = content[2]
+        # print("iterated object:", iterated_object)
+        forall_body = content[4:]
+        # print("forall body:", forall_body)
+
+        forall_dict = {'forall': iterated_object, 'body': forall_body}
+        # print("forall returns:", forall_dict)
+        return forall_dict
+
+    def when(self, content):
+        # print("when cont:", content)
+        when_items = list()
+        for when_item in content:
+            # ignore delimiters and whitespace:
+            if type(when_item) == lark.Token and when_item.type in ["WHENL", "WS"]:
+                pass
+            else:
+                when_items.append(when_item)
+        when_dict = {'when': when_items}
+        # print("when returns:", when_dict)
+        return when_dict
+
+    def andp(self, content):
+        # print("andp cont:", content)
+        and_items = list()
+        for and_item in content:
+            # ignore delimiters and whitespace:
+            if type(and_item) == lark.Token and and_item.type in ["ANDL", "WS"]:
+                pass
+            else:
+                and_items.append(and_item)
+        and_dict = {'and': and_items}
+        # print("andp returns:", and_dict, "\n")
+        return and_dict
+
+    def orp(self, content):
+        # print("orp cont:", content)
+        or_items = list()
+        for or_item in content:
+            # ignore delimiters and whitespace:
+            if type(or_item) == lark.Token and or_item.type in ["ORL", "WS"]:
+                pass
+            else:
+                or_items.append(or_item)
+        or_dict = {'or': or_items}
+        # print("orp returns:", or_dict, "\n")
+        return or_dict
+
+    def notp(self, content):
+        # print("notp cont:", content)
+        # (not X) always wraps only one item, hence:
+        return {'not': content[2]}
+
+
+
+    def equal(self, content):
+        # print("equal cont:", content)
+        # the (= X Y) can only ever take two arguments, thus directly accessing them:
+        equal_dict = {'equal': [content[2], content[4]]}
+        # print("equal returns:", equal_dict)
+        return equal_dict
+
+    def pred(self, content):
+        # print("pred content:", content)
+        if type(content[0]) == lark.Token:
+            pred_type = content[0].value
+        else:
+            pred_type = content[0]
+        # valence up to three, using None assignments to avoid downstream checks
+        pred_arg1 = None
+        pred_arg2 = None
+        pred_arg3 = None
+
+        if len(content) >= 3:
+            # print('pred arg 1:', content[2])
+            if type(content[2]) == lark.Token:
+                pred_arg1 = content[2].value
+            else:
+                pred_arg1 = content[2]
+        if len(content) >= 5:
+            if type(content[4]) == lark.Token:
+                pred_arg2 = content[4].value
+            else:
+                pred_arg2 = content[4]
+        if len(content) >= 7:
+            if type(content[6]) == lark.Token:
+                pred_arg3 = content[6].value
+            else:
+                pred_arg3 = content[6]
+
+        pred_dict = {'predicate': pred_type, 'arg1': pred_arg1, 'arg2': pred_arg2, 'arg3': pred_arg3}
+        # print(pred_dict, "\n")
+
+        return pred_dict
+
+    def var(self, content):
+        # print(content[0])
+        return {'variable': content[0].value}
+
+
+domain_def_transformer = PDDLDomainTransformer()
+
+domain_def = domain_def_transformer.transform(parsed_domain)
+
+# print("domain_def:", domain_def)
+
+
+
+
 # PROCESSING
 
 # action_def_source = "resources/definitions/basic_actions_v2.json"
@@ -238,6 +464,10 @@ class TestIF:
         self.initialize_action_types()
 
         # print(self.action_types)
+
+        self.domain = dict()
+        self.initialize_domain()
+        # print("initialized domain:", self.domain)
 
         self.world_state: set = set()
         self.world_state_history: list = list()
@@ -348,6 +578,69 @@ class TestIF:
             # convert fact to change from string to tuple:
             # cur_action_type['object_post_state'] = fact_str_to_tuple(cur_action_type['object_post_state'])
 
+    def initialize_domain(self):
+        """Load and process the domain(s) used in this adventure.
+        Definitions are loaded from external files.
+        """
+        # load domain definitions in game instance:
+        domain_definitions: list = list()
+        for domain_def_source in self.game_instance["domain_definitions"]:
+            domain_def_raw = self.load_json(f"resources{os.sep}definitions{os.sep}{domain_def_source[:-5]}")
+            # print("domain_def_raw:", domain_def_raw)
+            # print("domain_def_raw pddl_domain:", domain_def_raw['pddl_domain'])
+            domain_definitions.append(domain_def_raw['pddl_domain'])
+
+        # print("domain_definitions", domain_definitions)
+
+        for domain_definition in domain_definitions:
+            # print("domain_definition:", domain_definition)
+            parsed_domain_pddl = domain_parser.parse(domain_definition)
+            processed_domain_pddl = domain_def_transformer.transform(parsed_domain_pddl)
+            # print("processed_domain_pddl:", processed_domain_pddl)
+
+        # for now assume only one domain definition:
+        self.domain = processed_domain_pddl
+        # multiple domain definitions would need proper checks/unification
+
+        # TODO?: full type inheritance as dict or the like?
+
+        # print("domain:", self.domain)
+        # print("domain types:", self.domain['types'])
+
+        # TRAIT TYPES FROM ENTITY DEFINITIONS
+        # print(self.entity_types)
+        # print(self.domain['types']['entity'])
+        trait_type_dict = dict()
+        for entity_type in self.domain['types']['entity']:
+            # print("domain entity type:", entity_type, "; type defined:", self.entity_types[entity_type])
+            if 'traits' in self.entity_types[entity_type]:
+                # print("defined type traits:", self.entity_types[entity_type]['traits'])
+                for trait in self.entity_types[entity_type]['traits']:
+                    if trait not in trait_type_dict:
+                        trait_type_dict[trait] = [entity_type]
+                    else:
+                        trait_type_dict[trait].append(entity_type)
+                    if trait not in self.domain['types']:
+                        self.domain['types'][trait] = [entity_type]
+                    else:
+                        self.domain['types'][trait].append(entity_type)
+        # print("trait type dict:", trait_type_dict)
+        # print(self.domain['types'])
+
+        # REVERSE SUBTYPE/SUPERTYPE DICT
+        supertype_dict = dict()
+        for supertype, subtypes in self.domain['types'].items():
+            # print("supertype:", supertype, "subtypes:", subtypes)
+            for subtype in subtypes:
+                if subtype not in supertype_dict:
+                    supertype_dict[subtype] = [supertype]
+                else:
+                    supertype_dict[subtype].append(supertype)
+
+        # print(supertype_dict)
+        self.domain['supertypes'] = supertype_dict
+        # print("domain:", self.domain)
+
     def initialize_states_from_strings(self):
         """
         Initialize the world state set from instance data.
@@ -452,23 +745,27 @@ class TestIF:
         state_changed = False  # main bool controlling final result world state fact set union/removal
         facts_to_remove = list()  # facts to be removed by world state set removal
         facts_to_add = list()  # facts to union with world state fact set
+
         # get current action definition:
-        cur_action_def = self.action_types[action_dict['type']]['interaction']
+        cur_action_def = self.action_types[action_dict['type']]
+        print("cur_action_def:", cur_action_def)
         # get current action PDDL parameter mapping:
         cur_action_pddl_map = self.action_types[action_dict['type']]['pddl_parameter_mapping']
         # pretty_action(cur_action_def)
+
         # PARAMETERS
         variable_map = dict()
-        parameters_base = cur_action_def['parameters']
+        parameters_base = cur_action_def['interaction']['parameters']
         # print(parameters_base)
         # check that parameters key correctly contains a PDDL type_list:
         if not 'type_list' in parameters_base:
             raise KeyError
         # get parameters list:
         parameters = parameters_base['type_list']
-        for parameter in parameters:
-            print("\nparameter:", parameter)
+        for param_idx, parameter in enumerate(parameters):
+            print("\nparameter:", parameter, "idx:", param_idx)
             cur_parameter_type = parameter['type_list_item']
+            print("cur_parameter_type:", cur_parameter_type)
             # go over variables in parameter:
             for variable in parameter['items']:
                 print("variable:", variable)
@@ -494,7 +791,6 @@ class TestIF:
                         variable_map[var_id] = "inventory"
                     case 'inventory_content':
                         variable_map[var_id] = self.get_inventory_content()
-
                 # check type match:
                 # assume all world state instance IDs end in numbers:
                 if variable_map[var_id][-1] in ["0","1","2","3","4","5","6","7","8","9"]:
@@ -503,6 +799,28 @@ class TestIF:
                     # assume that other strings are essentially type strings:
                     var_type = variable_map[var_id]
                 print("var_type:", var_type)
+
+                # DOMAIN TYPE CHECK
+                type_matched = False
+                if type(var_type) == str:
+                    # TODO: handle inventory contents - does it make sense to handle them as a list like this in the first place?
+                    if var_type in self.domain['supertypes']:
+                        print("domain supertypes for current var_type:", self.domain['supertypes'][var_type])
+                    # check if type matches directly:
+                    if var_type == cur_parameter_type:
+                        type_matched = True
+                    # check if type matches through supertype:
+                    elif var_type in self.domain['supertypes'] and cur_parameter_type in self.domain['supertypes'][var_type]:
+                        type_matched = True
+                    print("type matched:", type_matched)
+
+                if not type_matched:
+                    # TODO: match variable idx, not just parameter idx!
+                    print("fail:", cur_action_def['failure_feedback']['parameters'][param_idx])
+                    # TODO: render jinja template with variable
+                    return "FAILED"
+
+
                 # TODO: check for predicates to match
 
         print("variable_map:", variable_map)
@@ -517,11 +835,13 @@ test_instance = {"initial_state":
                     "in(sandwich1,inventory)"},
                 "action_definitions": ["basic_actions_v2.json"],
                 "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"]}
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
 
 test_interpreter = TestIF(test_instance)
 
 
 action_input = {'type': "go", 'arg1': "kitchen"}
+# action_input = {'type': "go", 'arg1': "balcony"}
 
 test_interpreter.resolve_action(action_input)

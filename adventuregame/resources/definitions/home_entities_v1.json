@@ -5,13 +5,6 @@
     "hidden": true
   },
   {
-    "type_name": "inventory",
-    "repr_str": "inventory",
-    "container": true,
-    "openable": true,
-    "traits": ["container"]
-  },
-  {
     "type_name": "floor",
     "repr_str": "floor",
     "hidden": true,
