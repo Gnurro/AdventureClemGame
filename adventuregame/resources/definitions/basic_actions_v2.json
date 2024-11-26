@@ -10,14 +10,14 @@
     },
     "failure_feedback": {
       "parameters": [
-        "{{ ?e }} is not openable.",
-        "{{ ?r }} is not a room. (This should not occur.)",
-        "{{ ?p }} is not a player. (This should not occur.)"
+        "{{ e }} is not openable.",
+        "{{ r }} is not a room. (This should not occur.)",
+        "{{ p }} is not a player. (This should not occur.)"
       ],
       "precondition": [
         "You are not where you are! (This should not occur.)",
         "You can't see a {{ ?e }} here.",
-        "The {{ ?e }} is not closed."
+        "The {{ e }} is not closed."
       ]
     },
     "success_feedback": "The {{ ?e }} is now open.",
@@ -34,9 +34,9 @@
     },
     "failure_feedback": {
       "parameters": [
-        "{{ ?e }} is not openable.",
-        "{{ ?r }} is not a room. (This should not occur.)",
-        "{{ ?p }} is not a player. (This should not occur.)"
+        "{{ e }} is not openable.",
+        "{{ r }} is not a room. (This should not occur.)",
+        "{{ p }} is not a player. (This should not occur.)"
       ],
       "precondition": [
         "You are not where you are! (This should not occur.)",
@@ -60,21 +60,21 @@
     },
     "failure_feedback": {
       "parameters": [
-        "{{ ?e }} is not takeable.",
-        "{{ ?s }} is not a receptacle.",
-        "{{ ?p }} is not a player. (This should not occur.)",
-        "{{ ?i }} is not an inventory. (This should not occur.)",
-        "{{ ?r }} is not a room. (This should not occur.)"
+        "{{ e }} is not takeable.",
+        "{{ s }} is not a receptacle.",
+        "{{ p }} is not a player. (This should not occur.)",
+        "{{ i }} is not an inventory. (This should not occur.)",
+        "{{ r }} is not a room. (This should not occur.)"
       ],
       "precondition": [
         "You are not where you are! (This should not occur.)",
         "You can't see a {{ ?e }} here.",
         "You can't see a {{ ?s }} here.",
-        "The {{ ?s }} is not a support.",
-        "The {{ ?e }} is not on the {{ ?s }}.",
-        "The {{ ?s }} is not a container.",
-        "The {{ ?s }} is not open.",
-        "The {{ ?e }} is not in the {{ ?s }}."
+        "The {{ s }} is not a support.",
+        "The {{ e }} is not on the {{ ?s }}.",
+        "The {{ s }} is not a container.",
+        "The {{ s }} is not open.",
+        "The {{ e }} is not in the {{ ?s }}."
       ]
     },
     "success_feedback": "You take the {{ ?e }}. {{ inventory_desc }}",
@@ -93,19 +93,19 @@
     },
     "failure_feedback": {
       "parameters": [
-        "{{ ?e }} is not moveable.",
-        "{{ ?t }} is not a receptacle.",
-        "{{ ?p }} is not a player. (This should not occur.)",
-        "{{ ?i }} is not an inventory. (This should not occur.)",
-        "{{ ?r }} is not a room. (This should not occur.)"
+        "{{ e }} is not moveable.",
+        "{{ t }} is not a receptacle.",
+        "{{ p }} is not a player. (This should not occur.)",
+        "{{ i }} is not an inventory. (This should not occur.)",
+        "{{ r }} is not a room. (This should not occur.)"
       ],
       "precondition": [
         "You are not where you are! (This should not occur.)",
         "You can't see a {{ ?e }} here.",
         "You can't see a {{ ?t }} here.",
-        "The {{ ?t }} is not a support.",
-        "The {{ ?t }} is not a container.",
-        "The {{ ?t }} is not open."
+        "The {{ t }} is not a support.",
+        "The {{ t }} is not a container.",
+        "The {{ t }} is not open."
       ]
     },
     "success_feedback": "You put the {{ ?e }} {{ prep }} the {{ ?t }}.",
@@ -124,16 +124,16 @@
     },
     "failure_feedback": {
       "parameters": [
-        "{{ ?c }} is not a room.",
-        "{{ ?d }} is not a room.",
-        "{{ ?p }} is not a player. (This should not occur.)",
-        "{{ ?e }} is not takeable. (This should not occur.)",
-        "{{ ?i }} is not an inventory. (This should not occur.)"
+        "{{ c }} is not a room.",
+        "{{ d }} is not a room.",
+        "{{ p }} is not a player. (This should not occur.)",
+        "{{ e }} is not takeable. (This should not occur.)",
+        "{{ i }} is not an inventory. (This should not occur.)"
       ],
       "precondition": [
         "You are not where you are! (This should not occur.)",
-        "You can't go to a {{ ?d }} from here.",
-        "You are already in the {{ ?d }}."
+        "You can't go to a {{ d }} from here.",
+        "You are already in the {{ d }}."
       ]
     },
     "success_feedback": "{{ room_desc }}",

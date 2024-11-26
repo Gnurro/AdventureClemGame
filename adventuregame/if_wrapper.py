@@ -139,8 +139,6 @@ class AdventureIFInterpreter(GameResourceLocator):
         Definitions are loaded from external files.
         """
 
-        # TODO: read and parse PDDL action representation
-
         # load action type definitions in game instance:
         action_definitions: list = list()
         for action_def_source in self.game_instance["action_definitions"]:

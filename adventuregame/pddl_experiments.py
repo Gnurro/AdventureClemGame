@@ -5,6 +5,7 @@ from typing import List, Set, Union
 
 import lark
 from lark import Lark, Transformer
+import jinja2
 
 from adv_util import fact_str_to_tuple, fact_tuple_to_str
 
@@ -740,7 +741,7 @@ class TestIF:
     # def check_predicate(self, ):
 
     def resolve_action(self, action_dict: dict) -> [bool, Union[Set, str], Union[dict, Set]]:
-        print(action_dict)
+        # print(action_dict)
         # vars for keeping track:
         state_changed = False  # main bool controlling final result world state fact set union/removal
         facts_to_remove = list()  # facts to be removed by world state set removal
@@ -748,10 +749,11 @@ class TestIF:
 
         # get current action definition:
         cur_action_def = self.action_types[action_dict['type']]
-        print("cur_action_def:", cur_action_def)
+        # print("cur_action_def:", cur_action_def)
+        # pretty_action(cur_action_def)
         # get current action PDDL parameter mapping:
         cur_action_pddl_map = self.action_types[action_dict['type']]['pddl_parameter_mapping']
-        # pretty_action(cur_action_def)
+        # print("cur_action_pddl_map:", cur_action_pddl_map)
 
         # PARAMETERS
         variable_map = dict()
@@ -763,17 +765,17 @@ class TestIF:
         # get parameters list:
         parameters = parameters_base['type_list']
         for param_idx, parameter in enumerate(parameters):
-            print("\nparameter:", parameter, "idx:", param_idx)
+            # print("\nparameter:", parameter, "idx:", param_idx)
             cur_parameter_type = parameter['type_list_item']
-            print("cur_parameter_type:", cur_parameter_type)
+            # print("cur_parameter_type:", cur_parameter_type)
             # go over variables in parameter:
             for variable in parameter['items']:
-                print("variable:", variable)
+                # print("variable:", variable)
                 var_id = variable["variable"]
-                print("var_id:", var_id)
+                # print("var_id:", var_id)
                 # use parameter mapping to resolve variable:
                 cur_var_map = cur_action_pddl_map[f'?{var_id}']
-                print("cur_var_map:", cur_var_map)
+                # print("cur_var_map:", cur_var_map)
                 match cur_var_map:
                     # assign action arguments:
                     case 'arg1':
@@ -798,41 +800,118 @@ class TestIF:
                 else:
                     # assume that other strings are essentially type strings:
                     var_type = variable_map[var_id]
-                print("var_type:", var_type)
+                # print("var_type:", var_type)
 
                 # DOMAIN TYPE CHECK
                 type_matched = False
                 if type(var_type) == str:
                     # TODO: handle inventory contents - does it make sense to handle them as a list like this in the first place?
                     if var_type in self.domain['supertypes']:
-                        print("domain supertypes for current var_type:", self.domain['supertypes'][var_type])
+                        # print("domain supertypes for current var_type:", self.domain['supertypes'][var_type])
+                        pass
                     # check if type matches directly:
                     if var_type == cur_parameter_type:
                         type_matched = True
                     # check if type matches through supertype:
                     elif var_type in self.domain['supertypes'] and cur_parameter_type in self.domain['supertypes'][var_type]:
                         type_matched = True
-                    print("type matched:", type_matched)
+                    # print("type matched:", type_matched)
+                else:
+                    # just pass through for now, see TODO above
+                    type_matched = True
 
                 if not type_matched:
-                    # TODO: match variable idx, not just parameter idx!
-                    print("fail:", cur_action_def['failure_feedback']['parameters'][param_idx])
-                    # TODO: render jinja template with variable
-                    return "FAILED"
+                    # get the index of the mismatched variable:
+                    var_idx = list(cur_action_pddl_map.keys()).index(f"?{var_id}")
+                    # get fail feedback template using mismatched variable index:
+                    feedback_template = cur_action_def['failure_feedback']['parameters'][var_idx]
+                    feedback_jinja = jinja2.Template(feedback_template)
+                    # fill feedback template:
+                    jinja_args = {var_id: variable_map[var_id]}
+                    feedback_str = feedback_jinja.render(jinja_args)
+                    feedback_str = feedback_str.capitalize()
+                    # print("parameter fail:", feedback_str)
+                    return False, feedback_str, {}
 
-
-                # TODO: check for predicates to match
-
+        # variable map is filled during parameter checking
         print("variable_map:", variable_map)
 
+        # PRECONDITION
+        preconditions: list = cur_action_def['interaction']['precondition'][0]['and']
+        # print("preconditions:", preconditions)
+        precon_idx = 0
+        for precondition in preconditions:
+            print(precondition)
+            # 'polarity' of the precondition:
+            # if True, the precondition is fulfilled if its fact is in the world state
+            # if False, the precondition is NOT fulfilled if its fact is in the world state
+            precon_polarity = True
+            if 'not' in precondition:
+                print("not clause in precondition!")
+                precon_polarity = False
+                precondition = precondition['not']
+            cur_predicate = precondition['predicate']
+            if not precondition['arg3']:
+                # print("No arg3 in precondition!")
+                if not precondition['arg2']:
+                    # print("No arg2 in precondition!")
+                    arg1_value = variable_map[precondition['arg1']['variable']]
+                    precon_tuple = (cur_predicate, arg1_value)
+                else:
+                    arg1_value = variable_map[precondition['arg1']['variable']]
+                    arg2_value = variable_map[precondition['arg2']['variable']]
+                    precon_tuple = (cur_predicate, arg1_value, arg2_value)
+            else:
+                arg1_value = variable_map[precondition['arg1']['variable']]
+                arg2_value = variable_map[precondition['arg2']['variable']]
+                arg3_value = variable_map[precondition['arg3']['variable']]
+                precon_tuple = (cur_predicate, arg1_value, arg2_value, arg3_value)
+
+            print("precon_tuple:", precon_tuple)
+            # TODO: handle type word in action input to world state mapping; ie arg2='kitchen' to match 'kitchen1'
+
+            # check for predicate fact to match the precondition:
+            precon_is_fact = False
+
+            if precon_tuple in self.world_state:
+                print(f"Precondition {precon_tuple} is in the world state!")
+                precon_is_fact = True
+            else:
+                print(f"Precondition {precon_tuple} is NOT in the world state!")
+
+            precon_fulfilled = False
+            # check that precondition 'polarity' matches:
+            if precon_is_fact == precon_polarity:
+                precon_fulfilled = True
+
+            if precon_fulfilled:
+                print("Precondition fulfilled!")
+            else:
+                print("Precondition not fulfilled!")
+                # get fail feedback template using precondition index:
+                feedback_template = cur_action_def['failure_feedback']['precondition'][precon_idx]
+                feedback_jinja = jinja2.Template(feedback_template)
+                # fill feedback template:
+                # jinja_args = {var_id: variable_map[var_id]}
+                jinja_args = variable_map
+                feedback_str = feedback_jinja.render(jinja_args)
+                feedback_str = feedback_str.capitalize()
+                print("fail:", feedback_str)
+
+            print("\n")
+            precon_idx += 1
+            # break
 
 
-test_instance = {"initial_state":
-                    {"type(player1,player)", "at(player1,hallway1)",
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,hallway1)",
                     "room(hallway1,hallway)", "room(kitchen1,kitchen)",
                     "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
                     "type(sandwich1,sandwich)", "takeable(sandwich1)",
-                    "in(sandwich1,inventory)"},
+                    "in(sandwich1,inventory)"
+                    },
                 "action_definitions": ["basic_actions_v2.json"],
                 "room_definitions": ["home_rooms.json"],
                 "entity_definitions": ["home_entities.json"],
