@@ -867,8 +867,40 @@ class TestIF:
                 arg3_value = variable_map[precondition['arg3']['variable']]
                 precon_tuple = (cur_predicate, arg1_value, arg2_value, arg3_value)
 
-            print("precon_tuple:", precon_tuple)
-            # TODO: handle type word in action input to world state mapping; ie arg2='kitchen' to match 'kitchen1'
+            print("precon_tuple pre-instance resolution:", precon_tuple)
+
+            # assume that action arguments that don't end in numbers are type words:
+            for arg_idx, action_arg in enumerate(precon_tuple[1:]):  # first tuple item is always a predicate
+                print("action_arg:", action_arg)
+                type_matched_instances = list()
+                if action_arg[-1] not in ["0","1","2","3","4","5","6","7","8","9"]:
+                    print(f"{action_arg} is not a type instance ID!")
+                    # go over world state facts to find room or type predicate:
+                    for fact in self.world_state:
+                        # check for predicate fact matching action argument:
+                        if fact[0] == "room" or fact[0] == "type":
+                            if fact[2] == action_arg:
+                                print("room predicate fact found:", fact)
+                                type_matched_instances.append(fact[1])
+
+                    print(type_matched_instances)
+                    # assume all room and entity types have only a single instance in the adventure
+                    match len(precon_tuple):
+                        case 2:
+                            precon_tuple = (precon_tuple[0], type_matched_instances[0])
+                        case 3:
+                            if arg_idx == 0:
+                                precon_tuple = (precon_tuple[0], type_matched_instances[0], precon_tuple[2])
+                            elif arg_idx == 1:
+                                precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0])
+                        case 4:
+                            if arg_idx == 0:
+                                precon_tuple = (precon_tuple[0], type_matched_instances[0], precon_tuple[2], precon_tuple[3])
+                            elif arg_idx == 1:
+                                precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0], precon_tuple[3])
+                            elif arg_idx == 2:
+                                precon_tuple = (precon_tuple[0], precon_tuple[1], precon_tuple[2], type_matched_instances[0])
+            print("precon_tuple post-instance resolution:", precon_tuple)
 
             # check for predicate fact to match the precondition:
             precon_is_fact = False
