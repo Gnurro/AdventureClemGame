@@ -932,7 +932,28 @@ class TestIF:
 
             print("\n")
             precon_idx += 1
-            # break
+
+        # TODO: apply action effect to world state
+        effects: list = cur_action_def['interaction']['effect']
+        if 'and' in effects[0]:
+            effects: list = cur_action_def['interaction']['effect'][0]['and']
+        # print("effects:", effects)
+
+        for effect in effects:
+            print("effect:", effect)
+            # TODO: handle forall loops
+            # TODO: handle when clauses
+            effect_polarity = True
+            if 'not' in effect:
+                effect_polarity = False
+                effect = effect['not']
+            effect_list = [effect['predicate'], effect['arg1']]  # effect predicates always have at least one argument
+            if effect['arg2']:
+                effect_list.append(effect['arg2'])
+                if effect['arg3']:
+                    effect_list.append(effect['arg3'])
+            effect_tuple = tuple(effect_list)
+            print("effect_tuple:", effect_tuple)
 
 
 
