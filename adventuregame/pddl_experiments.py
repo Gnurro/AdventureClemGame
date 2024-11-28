@@ -834,20 +834,20 @@ class TestIF:
                     return False, feedback_str, {}
 
         # variable map is filled during parameter checking
-        print("variable_map:", variable_map)
+        # print("variable_map pre-preconditions:", variable_map)
 
         # PRECONDITION
         preconditions: list = cur_action_def['interaction']['precondition'][0]['and']
         # print("preconditions:", preconditions)
         precon_idx = 0
         for precondition in preconditions:
-            print(precondition)
+            # print(precondition)
             # 'polarity' of the precondition:
             # if True, the precondition is fulfilled if its fact is in the world state
             # if False, the precondition is NOT fulfilled if its fact is in the world state
             precon_polarity = True
             if 'not' in precondition:
-                print("not clause in precondition!")
+                # print("not clause in precondition!")
                 precon_polarity = False
                 precondition = precondition['not']
             cur_predicate = precondition['predicate']
@@ -867,24 +867,32 @@ class TestIF:
                 arg3_value = variable_map[precondition['arg3']['variable']]
                 precon_tuple = (cur_predicate, arg1_value, arg2_value, arg3_value)
 
-            print("precon_tuple pre-instance resolution:", precon_tuple)
+            # print("precon_tuple pre-instance resolution:", precon_tuple)
 
             # assume that action arguments that don't end in numbers are type words:
             for arg_idx, action_arg in enumerate(precon_tuple[1:]):  # first tuple item is always a predicate
-                print("action_arg:", action_arg)
+                # print("action_arg:", action_arg)
                 type_matched_instances = list()
                 if action_arg[-1] not in ["0","1","2","3","4","5","6","7","8","9"]:
-                    print(f"{action_arg} is not a type instance ID!")
+                    # print(f"{action_arg} is not a type instance ID!")
                     # go over world state facts to find room or type predicate:
                     for fact in self.world_state:
                         # check for predicate fact matching action argument:
                         if fact[0] == "room" or fact[0] == "type":
                             if fact[2] == action_arg:
-                                print("room predicate fact found:", fact)
+                                # print(f"{fact[0]} predicate fact found:", fact)
                                 type_matched_instances.append(fact[1])
 
-                    print(type_matched_instances)
+                    # print(type_matched_instances)
                     # assume all room and entity types have only a single instance in the adventure
+
+                    # replace corresponding variable_map value with instance ID:
+                    for variable in variable_map:
+                        if variable_map[variable] == action_arg:
+                            variable_map[variable] = type_matched_instances[0]
+                            # print("instance-filled variable_map:", variable_map)
+
+                    # create fact tuple to check for:
                     match len(precon_tuple):
                         case 2:
                             precon_tuple = (precon_tuple[0], type_matched_instances[0])
@@ -900,16 +908,17 @@ class TestIF:
                                 precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0], precon_tuple[3])
                             elif arg_idx == 2:
                                 precon_tuple = (precon_tuple[0], precon_tuple[1], precon_tuple[2], type_matched_instances[0])
-            print("precon_tuple post-instance resolution:", precon_tuple)
+            # print("precon_tuple post-instance resolution:", precon_tuple)
 
             # check for predicate fact to match the precondition:
             precon_is_fact = False
 
             if precon_tuple in self.world_state:
-                print(f"Precondition {precon_tuple} is in the world state!")
+                # print(f"Precondition {precon_tuple} is in the world state!")
                 precon_is_fact = True
             else:
-                print(f"Precondition {precon_tuple} is NOT in the world state!")
+                # print(f"Precondition {precon_tuple} is NOT in the world state!")
+                pass
 
             precon_fulfilled = False
             # check that precondition 'polarity' matches:
@@ -917,9 +926,10 @@ class TestIF:
                 precon_fulfilled = True
 
             if precon_fulfilled:
-                print("Precondition fulfilled!")
+                # print("Precondition fulfilled!")
+                pass
             else:
-                print("Precondition not fulfilled!")
+                # print("Precondition not fulfilled!")
                 # get fail feedback template using precondition index:
                 feedback_template = cur_action_def['failure_feedback']['precondition'][precon_idx]
                 feedback_jinja = jinja2.Template(feedback_template)
@@ -928,10 +938,14 @@ class TestIF:
                 jinja_args = variable_map
                 feedback_str = feedback_jinja.render(jinja_args)
                 feedback_str = feedback_str.capitalize()
-                print("fail:", feedback_str)
+                # print("fail:", feedback_str)
 
-            print("\n")
+            # print("\n")
             precon_idx += 1
+
+        print("variable_map post-preconditions:", variable_map)
+
+        # EFFECT
 
         # TODO: apply action effect to world state
         effects: list = cur_action_def['interaction']['effect']
@@ -941,19 +955,120 @@ class TestIF:
 
         for effect in effects:
             print("effect:", effect)
-            # TODO: handle forall loops
-            # TODO: handle when clauses
             effect_polarity = True
             if 'not' in effect:
                 effect_polarity = False
                 effect = effect['not']
+
+            # TODO: handle forall loops
+            if 'forall' in effect:
+                # print("forall effect:", effect)
+                forall_type = effect['forall']
+                # print("forall_type:", forall_type)
+                # handle single-predicate forall:
+                if 'predicate' in forall_type:
+                    forall_predicate = forall_type['predicate']
+                    if 'variable' in forall_predicate:
+                        # resolve variable:
+                        forall_predicate_value = variable_map[forall_type['predicate']['variable']]
+                        # print("forall_predicate_value:", forall_predicate_value)
+                        # currently assumes that this is only used for inventory content wildcard
+                        if type(forall_predicate_value) == list:
+                            forall_items = forall_predicate_value
+                # TODO: handle type_list forall
+
+                forall_body = effect['body']
+                # print("forall_body:", forall_body)
+
+                for forall_body_element in forall_body:
+                    # print("forall_body_element:", forall_body_element)
+                    if 'when' in forall_body_element:
+                        # print("When clause in forall body element:", forall_body_element['when'])
+                        # when_items = forall_body_element['when']
+
+                        when_conditions_fulfilled = False
+                        when_conditions = forall_body_element['when'][0]
+                        print("when_conditions pre-and/or:", when_conditions)
+                        when_conditions_type = "predicate"
+                        if 'and' in when_conditions:
+                            when_conditions_type = "and"
+                            when_conditions = when_conditions['and']
+                        elif 'or' in when_conditions:
+                            when_conditions_type = "or"
+                            when_conditions = when_conditions['or']
+
+                        if when_conditions_type in ["and", "or"]:
+                            print("when_conditions after and/or:", when_conditions)
+
+                        if when_conditions_type == "and":
+                            for when_condition in when_conditions:
+                                print("and when_condition:", when_condition)
+                        elif when_conditions_type == "or":
+                            for when_condition in when_conditions:
+                                print("or when_condition:", when_condition)
+                        elif when_conditions_type == "predicate":
+                            print("single-predicate when_conditions:", when_conditions)
+                            when_condition_predicate = when_conditions['predicate']
+
+                            when_condition_arg1 = when_conditions['arg1']
+                            if 'variable' in when_condition_arg1:
+                                when_condition_arg1 = variable_map[when_condition_arg1['variable']]
+                                print("filled when condition variable:", when_condition_arg1)
+                                # TODO: handle lists vs single item in var_map
+
+                            when_condition_arg2 = None
+                            if when_conditions['arg2']:
+                                when_condition_arg2 = when_conditions['arg2']
+                            # if when_condition_arg2
+
+                            when_condition_arg3 = None
+                            if when_conditions['arg3']:
+                                when_condition_arg3 = when_conditions['arg3']
+
+
+                    # TODO: write predicate to tuple function
+                    # TODO: write generic tuple-in-world-state checking function (for both preconditions and when-clause conditions)
+                    # TODO: extract when handling into function
+
+
+                        when_effects = forall_body_element['when'][1]
+                        # print("when_effects:", when_effects)
+
+                # apply body for all items:
+                for forall_item in forall_items:
+                    pass
+
+            # TODO: handle when clauses
+
             effect_list = [effect['predicate'], effect['arg1']]  # effect predicates always have at least one argument
             if effect['arg2']:
+                print("effect['arg2']:", effect['arg2'])
                 effect_list.append(effect['arg2'])
                 if effect['arg3']:
                     effect_list.append(effect['arg3'])
+
+            for effect_arg_idx, effect_arg in enumerate(effect_list):
+                if effect_arg_idx == 0:
+                    continue
+                print(f"effect_arg {effect_arg_idx}:", effect_arg)
+                if type(effect_arg) == dict and 'variable' in effect_arg:
+                    print("effect_arg['variable']:", effect_arg['variable'])
+                    effect_list[effect_arg_idx] = variable_map[effect_arg['variable']]
+
+
             effect_tuple = tuple(effect_list)
             print("effect_tuple:", effect_tuple)
+
+            if effect_polarity:
+                print(f"Adding {effect_tuple} to world state.")
+                self.world_state.add(effect_tuple)
+            elif not effect_polarity:
+                print(f"Removing {effect_tuple} from world state.")
+                self.world_state.remove(effect_tuple)
+
+            print("\n")
+
+        print("World state after effects:", self.world_state)
 
 
 
