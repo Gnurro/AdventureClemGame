@@ -23,8 +23,8 @@ FORALLL.1: "(forall"
 when: WHENL WS+ (type_list | pred | notp | forall | equal | andp) WS+ (type_list | pred | notp | forall | equal | andp) WS* ")" WS*
 WHENL.1: "(when"
 
-type_list: "(" type_list_item+ ")"
-type_list_item: (var WS | WORDP WS)+ DASH WS WORDP WS*
+type_list: "(" type_list_element+ ")"
+type_list_element: (var WS | WORDP WS)+ DASH WS WORDP WS*
 
 DASH: "-"
 UNDERSCORE: "_"

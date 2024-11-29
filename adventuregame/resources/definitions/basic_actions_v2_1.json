@@ -114,11 +114,12 @@
   {
     "type_name": "go",
     "lark": "go: GO (\"back\" WS)* (\"to\" WS)* thing\nGO.1: (\"go\" | \"enter\" | \"return\" | \"proceed\" | \"move\") WS",
-    "pddl": "(:action GO\n    :parameters (?c ?d - room ?p - player ?i - inventory)\n    :precondition (and\n        (at ?p ?c)\n        (exit ?c ?d)\n        (not (at ?p ?d))\n        )\n    :effect (and\n        (at ?p ?d)\n        (not (at ?p ?c))\n        (forall (?e - takeable)\n            (when\n                (in ?e ?i)\n                (and\n                    (at ?e ?d)\n                    (not (at ?e ?c))\n                )\n            )\n        )\n    )\n)",
+    "pddl": "(:action GO\n    :parameters (?c ?d - room ?p - player ?e - takeable ?i - inventory)\n    :precondition (and\n        (at ?p ?c)\n        (exit ?c ?d)\n        (not (at ?p ?d))\n        )\n    :effect (and\n        (at ?p ?d)\n        (not (at ?p ?c))\n        (forall (?e)\n            (when\n                (in ?e ?i)\n                (and\n                    (at ?e ?d)\n                    (not (at ?e ?c))\n                )\n            )\n        )\n    )\n)",
     "pddl_parameter_mapping": {
       "?c": "current_player_room",
       "?d": "arg1",
       "?p": "player",
+      "?e": "inventory_content",
       "?i": "inventory"
     },
     "failure_feedback": {
@@ -126,6 +127,7 @@
         "{{ c }} is not a room.",
         "{{ d }} is not a room.",
         "{{ p }} is not a player. (This should not occur.)",
+        "{{ e }} is not takeable. (This should not occur.)",
         "{{ i }} is not an inventory. (This should not occur.)"
       ],
       "precondition": [
