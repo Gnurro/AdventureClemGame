@@ -18,7 +18,19 @@
         )
     :effect (and
         (in ?e ?i)
-        (not (on ?e ?s))
-        (not (in ?e ?s))
+        (when
+            (and
+                (support ?s)
+                (on ?e ?s)
+                )
+            (not (on ?e ?s))
+            )
+        (when
+            (and
+                (container ?s)
+                (in ?e ?s)
+                )
+            (not (in ?e ?s))
+            )
     )
 )

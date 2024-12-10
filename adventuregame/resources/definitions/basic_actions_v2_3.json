@@ -4,9 +4,9 @@
     "lark": "open: OPEN thing\nOPEN.1: \"open\" WS",
     "pddl": "(:action OPEN\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (closed ?e)\n        )\n    :effect (and\n        (open ?e)\n        (not (closed ?e))\n    )\n)",
     "pddl_parameter_mapping": {
-      "?e": ["arg1"],
-      "?r": ["current_player_room"],
-      "?p": ["player"]
+      "?e": "arg1",
+      "?r": "current_player_room",
+      "?p": "player"
     },
     "failure_feedback": {
       "parameters": [
@@ -28,9 +28,9 @@
     "lark": "close: CLOSE thing\nCLOSE.1: \"close\" WS",
     "pddl": "(:action CLOSE\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (open ?e)\n        )\n    :effect (and\n        (closed ?e)\n        (not (open ?e))\n    )\n)",
     "pddl_parameter_mapping": {
-      "?e": ["arg1"],
-      "?r": ["current_player_room"],
-      "?p": ["player"]
+      "?e": "arg1",
+      "?r": "current_player_room",
+      "?p": "player"
     },
     "failure_feedback": {
       "parameters": [
@@ -52,11 +52,11 @@
     "lark": "take: TAKE PREP* thing (PREP thing)*\nTAKE.1: (\"take\" | \"grab\" | \"pick\" | \"get\") WS",
     "pddl": "(:action TAKE\n    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?s ?r)\n        (or\n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (and\n                (container ?s)\n                (open ?s)\n                (in ?e ?s)\n                )\n            )\n        )\n    :effect (and\n        (in ?e ?i)\n        (when \n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (not (on ?e ?s))\n            )\n        (when \n            (and\n                (container ?s)\n                (in ?e ?s)\n                )\n            (not (in ?e ?s))\n            )\n    )\n)",
     "pddl_parameter_mapping": {
-      "?e": ["arg1"],
-      "?s": ["arg2", "arg1_receptacle"],
-      "?p": ["player"],
-      "?i": ["inventory"],
-      "?r": ["current_player_room"]
+      "?e": "arg1",
+      "?s": "arg2",
+      "?p": "player",
+      "?i": "inventory",
+      "?r": "current_player_room"
     },
     "failure_feedback": {
       "parameters": [
@@ -85,11 +85,11 @@
     "lark": "put: PUT thing (\"back\" WS)* PREP* thing\nPUT.1: (\"put\" | \"leave\" | \"place\" | \"drop\") WS",
     "pddl": "(:action PUT\n    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?t ?r)\n        (or\n            (support ?t)\n            (and\n                (container ?t)\n                (open ?t)\n                )\n            )\n        )\n    :effect (and\n        (not (in ?e ?i))\n        (when\n            (support ?t)\n            (on ?e ?t)\n            )\n        (when\n            (container ?t)\n            (in ?e ?t)\n            )\n        )\n)",
     "pddl_parameter_mapping": {
-      "?e": ["arg1"],
-      "?t": ["arg2"],
-      "?p": ["player"],
-      "?i": ["inventory"],
-      "?r": ["current_player_room"]
+      "?e": "arg1",
+      "?t": "arg2",
+      "?p": "player",
+      "?i": "inventory",
+      "?r": "current_player_room"
     },
     "failure_feedback": {
       "parameters": [
@@ -116,10 +116,10 @@
     "lark": "go: GO (\"back\" WS)* (\"to\" WS)* thing\nGO.1: (\"go\" | \"enter\" | \"return\" | \"proceed\" | \"move\") WS",
     "pddl": "(:action GO\n    :parameters (?c ?d - room ?p - player ?i - inventory)\n    :precondition (and\n        (at ?p ?c)\n        (not (at ?p ?d))\n        (exit ?c ?d)\n        )\n    :effect (and\n        (at ?p ?d)\n        (not (at ?p ?c))\n        (forall (?e - takeable)\n            (when\n                (in ?e ?i)\n                (and\n                    (at ?e ?d)\n                    (not (at ?e ?c))\n                )\n            )\n        )\n    )\n)",
     "pddl_parameter_mapping": {
-      "?c": ["current_player_room"],
-      "?d": ["arg1"],
-      "?p": ["player"],
-      "?i": ["inventory"]
+      "?c": "current_player_room",
+      "?d": "arg1",
+      "?p": "player",
+      "?i": "inventory"
     },
     "failure_feedback": {
       "parameters": [

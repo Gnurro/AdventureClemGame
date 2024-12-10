@@ -890,14 +890,187 @@ class TestIF:
 
         return inventory_content
 
-    # def predicate_clause_to_tuple(self, predicate_clause):
-
     def check_fact(self, fact_tuple) -> bool:
         """Check if a fact tuple is in the world state."""
+        print("Checking for", fact_tuple)
+        # always return True for fact tuples with None, as this marks optional action arguments
+        if None in fact_tuple:
+            return True
+
         if fact_tuple in self.world_state:
+            print(fact_tuple, "in world state!")
             return True
         else:
             return False
+
+    def predicate_to_tuple(self, predicate, variable_map) -> tuple:
+        """Convert a PDDL predicate object to a world state tuple.
+        Resolves variables as well.
+        Resolves type action/predicate arguments assuming single type instance.
+        """
+
+        predicate_type = predicate['predicate']
+
+        predicate_arg1 = predicate['arg1']
+        if 'variable' in predicate_arg1:
+            predicate_arg1 = variable_map[predicate_arg1['variable']]
+            # print("filled when condition variable:", when_condition_arg1)
+            # for now:
+            if type(predicate_arg1) == list:
+                when_condition_arg1 = predicate_arg1[0]
+
+        predicate_list = [predicate_type, predicate_arg1]
+
+        predicate_arg2 = None
+        if predicate['arg2']:
+            predicate_arg2 = predicate['arg2']
+            if 'variable' in predicate_arg2:
+                predicate_arg2 = variable_map[predicate_arg2['variable']]
+                # print("filled when condition variable:", when_condition_arg2)
+            predicate_list.append(predicate_arg2)
+
+        predicate_arg3 = None
+        if predicate['arg3']:
+            predicate_arg3 = predicate['arg3']
+            if 'variable' in predicate_arg3:
+                predicate_arg3 = variable_map[predicate_arg3['variable']]
+                # print("filled when condition variable:", when_condition_arg3)
+            predicate_list.append(predicate_arg3)
+
+        # print("when_condition_list:", when_condition_list)
+        predicate_tuple = tuple(predicate_list)
+        # print("when_condition_tuple:", when_condition_tuple)
+
+        # assume that action arguments that don't end in numbers or "floor" are type words:
+        for tuple_idx, tuple_arg in enumerate(predicate_tuple[1:]):  # first tuple item is always a predicate
+            # print("tuple_arg:", tuple_arg)
+            type_matched_instances = list()
+            if tuple_arg:
+                if not tuple_arg.endswith(
+                    ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "floor")):  # TODO: floor hardcode removal
+                    # print(f"{tuple_arg} is not a type instance ID!")
+                    # go over world state facts to find room or type predicate:
+                    for fact in self.world_state:
+                        # check for predicate fact matching action argument:
+                        if fact[0] == "room" or fact[0] == "type":
+                            if fact[2] == tuple_arg:
+                                # print(f"{fact[0]} predicate fact found:", fact)
+                                type_matched_instances.append(fact[1])
+                        # TODO: fail if there is no type-fitting instance in world state
+
+                    # print(type_matched_instances)
+
+                    # NB: assume all room and entity types have only a single instance in the adventure!
+
+                    # replace corresponding variable_map value with instance ID:
+                    for variable in variable_map:
+                        if variable_map[variable] == tuple_arg:
+                            variable_map[variable] = type_matched_instances[0]
+                            # print("instance-filled variable_map:", variable_map)
+
+                    # create fact tuple to check for:
+                    match len(predicate_tuple):
+                        case 2:
+                            predicate_tuple = (predicate_tuple[0], type_matched_instances[0])
+                        case 3:
+                            if tuple_idx == 0:
+                                predicate_tuple = (predicate_tuple[0], type_matched_instances[0], predicate_tuple[2])
+                            elif tuple_idx == 1:
+                                predicate_tuple = (predicate_tuple[0], predicate_tuple[1], type_matched_instances[0])
+                        case 4:
+                            if tuple_idx == 0:
+                                predicate_tuple = (
+                                predicate_tuple[0], type_matched_instances[0], predicate_tuple[2], predicate_tuple[3])
+                            elif tuple_idx == 1:
+                                predicate_tuple = (
+                                predicate_tuple[0], predicate_tuple[1], type_matched_instances[0], predicate_tuple[3])
+                            elif tuple_idx == 2:
+                                predicate_tuple = (
+                                predicate_tuple[0], predicate_tuple[1], predicate_tuple[2], type_matched_instances[0])
+
+        # print("predicate_tuple post-instance resolution:", predicate_tuple)
+
+        return predicate_tuple
+
+    def check_conditions(self, conditions, variable_map, check_precon_idx = True) -> bool:
+        """Check if a passed condition 'and'/'or' clause is true."""
+        # print("check_conditions input conditions:", conditions)
+
+        # TODO: handle precondition predicate index for action precondition feedback
+
+        if 'not' in conditions:
+            # print("'Not' phrase condition.")
+            conditions_polarity = False
+            inner_condition = conditions['not']
+            # print("'not' phrase inner_condition:", inner_condition)
+            inner_condition_is_fact = self.check_conditions(inner_condition, variable_map, check_precon_idx=check_precon_idx)
+            # print("inner_condition_is_fact:", inner_condition_is_fact)
+            if inner_condition_is_fact == conditions_polarity:
+                return True
+            else:
+                return False
+
+        if 'predicate' in conditions:
+            print("Bare predicate condition:", conditions)
+            predicate_tuple = self.predicate_to_tuple(conditions, variable_map)
+            print("predicate_tuple:", predicate_tuple)
+            if check_precon_idx:
+                print("Current self.precon_idx:", self.precon_idx)
+                pass
+            is_fact = self.check_fact(predicate_tuple)
+            # print("is_fact:", is_fact)
+            if check_precon_idx:
+                self.precon_idx += 1
+                self.precon_tuples.append((predicate_tuple, is_fact, self.precon_idx))
+
+            return is_fact
+
+        if 'and' in conditions:
+            and_conditions_checklist = list()
+            # print("And conditions:", conditions)
+            conditions = conditions['and']
+            # print("Extracted and conditions list:", conditions)
+            for and_condition in conditions:
+                # print("and_condition:", and_condition)
+                checks_out = self.check_conditions(and_condition, variable_map, check_precon_idx=check_precon_idx)
+                # print("checks_out:", checks_out)
+                # since all facts need to check out for 'and' clauses, immediately return failure:
+                # if not checks_out:
+                #    return False
+                and_conditions_checklist.append(checks_out)
+                # print()
+            # print("and_conditions_checklist:", and_conditions_checklist)
+            # check if all conditions are true:
+            if not False in and_conditions_checklist:
+                return True
+            else:
+                return False
+
+        if 'or' in conditions:
+            or_conditions_checklist = list()
+            # print("Or conditions:", conditions)
+            conditions = conditions['or']
+            # print("Extracted or conditions list:", conditions)
+            for or_condition in conditions:
+                # print("or_condition:", or_condition)
+                checks_out = self.check_conditions(or_condition, variable_map, check_precon_idx=check_precon_idx)
+                # print("checks_out:", checks_out)
+                or_conditions_checklist.append(checks_out)
+                # print()
+            # print("or_conditions_checklist:", or_conditions_checklist)
+            # check if any condition is true:
+            if True in or_conditions_checklist:
+                return True
+            else:
+                # TODO: figure out 'or' condition fail feedback -> use first False? -> needs recording of 'not' phrase results
+                return False
+
+        # TODO: handle forall conditions
+
+        # print()
+
+        return False
+
 
     def resolve_forall(self, forall_clause, variable_map):
         # TODO: make this work for preconditions as well
@@ -906,7 +1079,6 @@ class TestIF:
         # print("forall_type:", forall_type)
 
         forall_results = {'added': [], 'removed': []}
-
 
         forall_variable_map = dict()  # all values can be expected to be lists
 
@@ -917,10 +1089,14 @@ class TestIF:
             if 'variable' in forall_predicate:
                 # since this is no type_list, supply list of all __entities__:
                 all_entities_list = [fact[1] for fact in self.world_state if fact[0] == 'type']
+
+                # NOTE: This assumes that forall clauses will only iterate over entities, NOT rooms!
+
                 # print("all_entities_list:", all_entities_list)
                 forall_variable_map[forall_predicate['variable']] = all_entities_list
                 forall_items = all_entities_list
         elif 'type_list' in forall_type:
+            # TODO?: iterate over multiple type list variables?
             # print("Type list forall_type:", forall_type)
             forall_type_list = forall_type['type_list']
             # print("forall_type_list:", forall_type_list)
@@ -969,8 +1145,28 @@ class TestIF:
                         # print("when_results:", when_results)
                         forall_results['added'] += when_results['added']
                         forall_results['removed'] += when_results['removed']
-                    # TODO: handle single-predicate forall bodies
-                    # TODO: handle and-clause forall bodies
+
+                    if 'and' in forall_body_element:
+                        # print("And clause forall body element:", forall_body_element)
+                        # print("And clause in forall body element(s):", forall_body_element['and'])
+
+                        and_items = forall_body_element['and']
+
+                        for and_item in and_items:
+                            # print("and_item:", and_item)
+                            if 'predicate' in and_item or 'not' in and_item:
+                                # print("Bare predicate or 'not' predicate item.")
+                                and_item_results = self.resolve_effect(and_item, iteration_forall_variable_map)
+                                # print("and_item_results:", and_item_results)
+                                forall_results['added'] += and_item_results['added']
+                                forall_results['removed'] += and_item_results['removed']
+                            if 'when' in and_item:
+                                when_results = self.resolve_when(and_item, iteration_forall_variable_map)
+                                forall_results['added'] += when_results['added']
+                                forall_results['removed'] += when_results['removed']
+                            # print()
+
+                    # TODO?: handle single-predicate forall bodies? -> would need grammar coverage
 
         # print("forall_results:", forall_results)
 
@@ -990,6 +1186,11 @@ class TestIF:
 
         when_conditions = when_clause[0]
         # print("when_conditions pre-and/or:", when_conditions)
+
+        checked_conditions = self.check_conditions(when_conditions, variable_map, check_precon_idx=False)
+        # print("checked_conditions:", checked_conditions)
+
+        """
         when_conditions_type = "predicate"
         if 'and' in when_conditions:
             when_conditions_type = "and"
@@ -1001,6 +1202,7 @@ class TestIF:
         if when_conditions_type in ["and", "or"]:
             # print("when_conditions after and/or:", when_conditions)
             pass
+
 
         if when_conditions_type == "and":
             for when_condition in when_conditions:
@@ -1049,8 +1251,12 @@ class TestIF:
             # check if condition is world state fact:
             if when_condition_tuple in self.world_state:
                 when_conditions_fulfilled = True
+        """
 
-        if when_conditions_fulfilled:
+
+        # if when_conditions_fulfilled:
+        if checked_conditions:
+            # print("When conditions fulfilled!")
             when_effects = when_clause[1]
             # print("when_effects:", when_effects)
             if 'and' in when_effects:
@@ -1067,7 +1273,7 @@ class TestIF:
                 when_results['added'] += resolve_effect_results['added']
                 when_results['removed'] += resolve_effect_results['removed']
         else:
-            # print()
+            # print("When conditions NOT fulfilled!")
             pass
 
         # print("when_results:", when_results)
@@ -1092,8 +1298,9 @@ class TestIF:
             if effect['arg3']:
                 effect_list.append(effect['arg3'])
 
+        # apply variable map:
         for effect_arg_idx, effect_arg in enumerate(effect_list):
-            if effect_arg_idx == 0:
+            if effect_arg_idx == 0:  # predicate does not need variable value application
                 continue
             # print(f"effect_arg {effect_arg_idx}:", effect_arg)
             if type(effect_arg) == dict and 'variable' in effect_arg:
@@ -1102,6 +1309,10 @@ class TestIF:
 
         effect_tuple = tuple(effect_list)
         # print("effect_tuple:", effect_tuple)
+
+        # return unfilled dict for fact tuples with None, as this marks optional action arguments:
+        if None in effect_tuple:
+            return resolve_effect_results
 
         if effect_polarity:
             # print(f"Adding {effect_tuple} to world state.")
@@ -1116,7 +1327,7 @@ class TestIF:
 
 
     def resolve_action(self, action_dict: dict) -> [bool, Union[Set, str], Union[dict, Set]]:
-        # print(action_dict)
+        # print("resolve_action input action_dict:", action_dict)
         # vars for keeping track:
         state_changed = False  # main bool controlling final result world state fact set union/removal
         facts_to_remove = list()  # facts to be removed by world state set removal
@@ -1151,12 +1362,42 @@ class TestIF:
                 # use parameter mapping to resolve variable:
                 cur_var_map = cur_action_pddl_map[f'?{var_id}']
                 # print("cur_var_map:", cur_var_map)
-                match cur_var_map:
+                match cur_var_map[0]:
                     # assign action arguments:
                     case 'arg1':
                         variable_map[var_id] = action_dict['arg1']
                     case 'arg2':
-                        variable_map[var_id] = action_dict['arg2']
+                        if 'arg2' in action_dict:
+                            # print("arg2 in action_dict")
+                            variable_map[var_id] = action_dict['arg2']
+                        else:
+                            # print("arg2 NOT in action_dict")
+                            # check alternate mapping:
+                            if len(cur_var_map) == 2:
+                                # print("Alternate mapping:", cur_var_map[1])
+                                if cur_var_map[1] == "arg1_receptacle":
+                                    # print("variable_map:", variable_map)
+                                    arg1_variable = None
+                                    for assigned_variable, assigned_value in cur_action_pddl_map.items():
+                                        # print("Checking", assigned_variable, assigned_value)
+                                        # print("assigned_variable value:", cur_action_pddl_map[assigned_variable])
+                                        if assigned_value[0] == "arg1":
+                                            # print("arg1 variable:", assigned_variable)
+                                            arg1_variable = assigned_variable[1:]
+                                            # print("arg1_variable:", arg1_variable)
+                                            break
+                                    arg1_value = variable_map[arg1_variable]
+                                    # print(arg1_value)
+                                    arg1_receptacle = None
+                                    for fact in self.world_state:
+                                        if fact[0] in ["in", "on"]:
+                                            if fact[1] == f"{arg1_value}1":  # assume only one instance of each type
+                                                arg1_receptacle = fact[2]
+                                                # print("arg1_receptacle:", arg1_receptacle)
+                                                break
+                                    variable_map[var_id] = arg1_receptacle
+                            else:
+                                variable_map[var_id] = None
                     # assign default wildcards:
                     case 'current_player_room':
                         variable_map[var_id] = self.get_player_room()
@@ -1169,11 +1410,15 @@ class TestIF:
 
                 # check type match:
                 # assume all world state instance IDs end in numbers:
-                if variable_map[var_id].endswith(("0","1","2","3","4","5","6","7","8","9","floor")):  # TODO?: floor hardcode removal
-                    var_type = self.inst_to_type_dict[variable_map[var_id]]
+                if variable_map[var_id]:
+                    if variable_map[var_id].endswith(("0","1","2","3","4","5","6","7","8","9","floor")):  # TODO: floor hardcode removal
+                        var_type = self.inst_to_type_dict[variable_map[var_id]]
+                    else:
+                        # assume that other strings are essentially type strings:
+                        var_type = variable_map[var_id]
                 else:
-                    # assume that other strings are essentially type strings:
                     var_type = variable_map[var_id]
+
                 # print("var_type:", var_type)
 
                 # DOMAIN TYPE CHECK
@@ -1204,33 +1449,45 @@ class TestIF:
                     jinja_args = {var_id: variable_map[var_id]}
                     feedback_str = feedback_jinja.render(jinja_args)
                     feedback_str = feedback_str.capitalize()
-                    # print("parameter fail:", feedback_str)
+                    print("parameter fail:", feedback_str)
                     return False, feedback_str, {}
 
         # variable map is filled during parameter checking
-        # print("variable_map pre-preconditions:", variable_map)
+        print("variable_map pre-preconditions:", variable_map)
 
         # PRECONDITION
+        preconditions: list = cur_action_def['interaction']['precondition'][0]
+        # print("preconditions/cur_action_def['interaction']['precondition'][0]:", preconditions)
+        self.precon_idx = -1
+        # self.precon_idx = 0
+        self.precon_tuples = list()
+        checked_conditions = self.check_conditions(preconditions, variable_map)
+        # print("Main action checked_conditions:",checked_conditions)
+        print("Checked precon tuples:", self.precon_tuples)
+
+        # TODO: handle recursive 'and'/'or' preconditions
+
+        """
         preconditions: list = cur_action_def['interaction']['precondition'][0]['and']
         # print("preconditions:", preconditions)
         precon_idx = 0
         for precondition in preconditions:
-            print("precondition:", precondition)
+            # print("precondition:", precondition)
 
             # 'polarity' of the precondition:
             # if True, the precondition is fulfilled if its fact is in the world state
             # if False, the precondition is NOT fulfilled if its fact is in the world state
             precon_polarity = True
             if 'not' in precondition:
-                print("not clause in precondition!")
+                # print("not clause in precondition!")
                 precon_polarity = False
                 precondition = precondition['not']
 
             cur_predicate = precondition['predicate']
             if not precondition['arg3']:
-                print("No arg3 in precondition!")
+                # print("No arg3 in precondition!")
                 if not precondition['arg2']:
-                    print("No arg2 in precondition!")
+                    # print("No arg2 in precondition!")
                     arg1_value = variable_map[precondition['arg1']['variable']]
                     precon_tuple = (cur_predicate, arg1_value)
                 else:
@@ -1243,30 +1500,32 @@ class TestIF:
                 arg3_value = variable_map[precondition['arg3']['variable']]
                 precon_tuple = (cur_predicate, arg1_value, arg2_value, arg3_value)
 
-            print("precon_tuple pre-instance resolution:", precon_tuple)
+            # print("precon_tuple pre-instance resolution:", precon_tuple)
 
             # assume that action arguments that don't end in numbers or "floor" are type words:
             for arg_idx, action_arg in enumerate(precon_tuple[1:]):  # first tuple item is always a predicate
-                print("action_arg:", action_arg)
+                # print("action_arg:", action_arg)
                 type_matched_instances = list()
-                if not action_arg.endswith(("0","1","2","3","4","5","6","7","8","9","floor")):
-                    print(f"{action_arg} is not a type instance ID!")
+                if not action_arg.endswith(("0","1","2","3","4","5","6","7","8","9","floor")):  # TODO: floor hardcode removal
+                    # print(f"{action_arg} is not a type instance ID!")
                     # go over world state facts to find room or type predicate:
                     for fact in self.world_state:
                         # check for predicate fact matching action argument:
                         if fact[0] == "room" or fact[0] == "type":
                             if fact[2] == action_arg:
-                                print(f"{fact[0]} predicate fact found:", fact)
+                                # print(f"{fact[0]} predicate fact found:", fact)
                                 type_matched_instances.append(fact[1])
+                        # TODO: fail if there is no type-fitting instance in world state
 
-                    print(type_matched_instances)
-                    # assume all room and entity types have only a single instance in the adventure
+                    # print(type_matched_instances)
+
+                    # NB: assume all room and entity types have only a single instance in the adventure!
 
                     # replace corresponding variable_map value with instance ID:
                     for variable in variable_map:
                         if variable_map[variable] == action_arg:
                             variable_map[variable] = type_matched_instances[0]
-                            print("instance-filled variable_map:", variable_map)
+                            # print("instance-filled variable_map:", variable_map)
 
                     # create fact tuple to check for:
                     match len(precon_tuple):
@@ -1284,6 +1543,7 @@ class TestIF:
                                 precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0], precon_tuple[3])
                             elif arg_idx == 2:
                                 precon_tuple = (precon_tuple[0], precon_tuple[1], precon_tuple[2], type_matched_instances[0])
+
             print("precon_tuple post-instance resolution:", precon_tuple)
 
             # check for predicate fact to match the precondition:
@@ -1302,10 +1562,10 @@ class TestIF:
                 precon_fulfilled = True
 
             if precon_fulfilled:
-                # print("Precondition fulfilled!")
+                print("Precondition fulfilled!")
                 pass
             else:
-                # print("Precondition not fulfilled!")
+                print("Precondition not fulfilled!")
                 # get fail feedback template using precondition index:
                 feedback_template = cur_action_def['failure_feedback']['precondition'][precon_idx]
                 feedback_jinja = jinja2.Template(feedback_template)
@@ -1317,19 +1577,55 @@ class TestIF:
                 jinja_args = clean_feedback_variable_map
                 feedback_str = feedback_jinja.render(jinja_args)
                 feedback_str = feedback_str.capitalize()
-                # print("fail:", feedback_str)
+                print("fail:", feedback_str)
 
                 return False, feedback_str, {}
 
             # print("\n")
             precon_idx += 1
+        """
 
-        print("variable_map post-preconditions:", variable_map)
+        if checked_conditions:
+            # print("Preconditions fulfilled!")
+            pass
+        else:
+            print("Preconditions not fulfilled!")
+            # get fail feedback template using precondition index:
+            # print("Current precon_idx:", self.precon_idx)
+
+            # TODO: make this work reliably with 'or' phrase preconditions in the mix!
+
+            # iterate backwards over check tuples and use last that doesn't check out:
+            for checked_tuple in reversed(self.precon_tuples):
+                # print("checked_tuple:", checked_tuple)
+                if not checked_tuple[1]:
+                    # print("checked_tuple[1] is falsy!")
+                    feedback_idx = checked_tuple[2]
+                    break
+
+            # feedback_template = cur_action_def['failure_feedback']['precondition'][self.precon_idx]
+            feedback_template = cur_action_def['failure_feedback']['precondition'][feedback_idx]
+
+            feedback_jinja = jinja2.Template(feedback_template)
+            # fill feedback template:
+            clean_feedback_variable_map = deepcopy(variable_map)
+            for key in clean_feedback_variable_map:
+                while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+            jinja_args = clean_feedback_variable_map
+            feedback_str = feedback_jinja.render(jinja_args)
+            feedback_str = feedback_str.capitalize()
+            # print("fail:", feedback_str)
+
+            return False, feedback_str, {}
+
+
+        # print("variable_map post-preconditions:", variable_map)
 
         # EFFECT
 
         effects: list = cur_action_def['interaction']['effect']
-        if 'and' in effects[0]:
+        if 'and' in effects[0]:  # handle multi-predicate effect, but allow non-and single predicate effect
             effects: list = cur_action_def['interaction']['effect'][0]['and']
         # print("effects:", effects)
 
@@ -1350,36 +1646,45 @@ class TestIF:
                 world_state_effects['added'] += resolve_effect_results['added']
                 world_state_effects['removed'] += resolve_effect_results['removed']
 
-            # TODO?: write predicate to tuple function?
-            # TODO: write generic tuple-in-world-state checking function (for both preconditions and when-clause conditions)
-
-            # TODO: handle when clauses
-
         print("world_state_effects:", world_state_effects)
 
         # print("World state after effects:", self.world_state)
 
         # SUCCESS FEEDBACK
 
+        # type word variable map instead of instance ID:
+        clean_feedback_variable_map = deepcopy(variable_map)
+        for key in clean_feedback_variable_map:
+            if clean_feedback_variable_map[key]:
+                while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+
         success_feedback_template = cur_action_def['success_feedback']
-        print("success_feedback_template:", success_feedback_template)
+        # print("success_feedback_template:", success_feedback_template)
 
         feedback_jinja = jinja2.Template(success_feedback_template)
 
-        jinja_args: dict = {}
+        # jinja_args: dict = {}
+        jinja_args: dict = clean_feedback_variable_map
         if "room_desc" in success_feedback_template:
             jinja_args["room_desc"] = self.get_full_room_desc()
+        if "prep" in success_feedback_template:
+            jinja_args["prep"] = action_dict['prep']
+            # TODO: make this feedback not rely on input command prep value, but actual action result
+
+        # TODO: reveal contents of opened containers
+        # TODO: don't mention inventory contents on room transition
 
         feedback_str = feedback_jinja.render(jinja_args)
         # feedback_str = feedback_str.capitalize()
 
-        print("feedback_str:", feedback_str)
+        # print("feedback_str:", feedback_str)
 
         return True, feedback_str, {}
 
 
 
-
+"""
 test_instance = {"initial_state":{
                     "type(player1,player)", "at(player1,hallway1)",
                     "room(hallway1,hallway)", "room(kitchen1,kitchen)",
@@ -1395,10 +1700,128 @@ test_instance = {"initial_state":{
                 "entity_definitions": ["home_entities.json"],
                 "domain_definitions": ["home_domain.json"]}
 
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    # "exit(kitchen1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,hallway1)",
+                    "type(apple1,apple)", "takeable(apple1)",
+                    "in(apple1,inventory)", "at(apple1,hallway1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,inventory)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+"""
+"""
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "closed(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+"""
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "on(apple1,counter1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "closed(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+
 test_interpreter = TestIF(test_instance)
 
+# print("Pre-action world state:", test_interpreter.world_state)
 
-action_input = {'type': "go", 'arg1': "kitchen"}
+# action_input = {'type': "go", 'arg1': "kitchen"}
+# action_input = {'type': "go", 'arg1': "hallway"}
 # action_input = {'type': "go", 'arg1': "balcony"}
+# action_input = {'type': "go", 'arg1': "bedroom"}
 
-test_interpreter.resolve_action(action_input)
+# action_input = {'type': "put", 'arg1': "apple", 'arg2': "counter"}
+# action_input = {'type': "put", 'arg1': "apple", 'arg2': "counter", 'prep': "on"}
+
+# action_input = {'type': "put", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "in"}
+
+# action_input = {'type': "put", 'arg1': "apple", 'arg2': "plate", 'prep': "on"}
+
+# action_input = {'type': "open", 'arg1': "refrigerator"}
+
+# action_input = {'type': "close", 'arg1': "refrigerator"}
+
+# action_input = {'type': "take", 'arg1': "apple"}
+action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
+
+# TODO: stop {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"} from revealing (non-)content of refrigerator
+
+
+action_resolve_result = test_interpreter.resolve_action(action_input)
+print("action_resolve_result:", action_resolve_result)
+
+# print("Post-action world state:", test_interpreter.world_state)
