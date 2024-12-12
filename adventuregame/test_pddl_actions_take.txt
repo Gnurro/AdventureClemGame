@@ -11,8 +11,8 @@
                 )
             (and
                 (container ?s)
-                (open ?s)
                 (in ?e ?s)
+                (open ?s)
                 )
             )
         )

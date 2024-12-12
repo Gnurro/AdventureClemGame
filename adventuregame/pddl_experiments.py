@@ -892,13 +892,13 @@ class TestIF:
 
     def check_fact(self, fact_tuple) -> bool:
         """Check if a fact tuple is in the world state."""
-        print("Checking for", fact_tuple)
+        # print("Checking for", fact_tuple)
         # always return True for fact tuples with None, as this marks optional action arguments
         if None in fact_tuple:
             return True
 
         if fact_tuple in self.world_state:
-            print(fact_tuple, "in world state!")
+            # print(fact_tuple, "in world state!")
             return True
         else:
             return False
@@ -992,30 +992,48 @@ class TestIF:
 
         return predicate_tuple
 
-    def check_conditions(self, conditions, variable_map, check_precon_idx = True) -> bool:
+    def check_conditions(self, conditions, variable_map, check_precon_idx = True, precon_trace = True) -> bool:
         """Check if a passed condition 'and'/'or' clause is true."""
         # print("check_conditions input conditions:", conditions)
 
         # TODO: handle precondition predicate index for action precondition feedback
 
+        # conditions_trace = deepcopy(prior_conditions_trace)
+
         if 'not' in conditions:
             # print("'Not' phrase condition.")
+
+            not_dict = {'not': dict()}
+
             conditions_polarity = False
             inner_condition = conditions['not']
             # print("'not' phrase inner_condition:", inner_condition)
-            inner_condition_is_fact = self.check_conditions(inner_condition, variable_map, check_precon_idx=check_precon_idx)
+            inner_condition_is_fact = self.check_conditions(inner_condition, variable_map, check_precon_idx=check_precon_idx, precon_trace=precon_trace)
             # print("inner_condition_is_fact:", inner_condition_is_fact)
+
+            if precon_trace:
+                not_dict['not'] = inner_condition_is_fact
+                not_true = False
+                if inner_condition_is_fact['checks_out'] == conditions_polarity:
+                    not_true = True
+                not_dict['checks_out'] = not_true
+                self.precon_trace.append(not_dict)
+
+                # print("not_dict:", not_dict)
+
+                return not_dict
+
             if inner_condition_is_fact == conditions_polarity:
                 return True
             else:
                 return False
 
         if 'predicate' in conditions:
-            print("Bare predicate condition:", conditions)
+            # print("Bare predicate condition:", conditions)
             predicate_tuple = self.predicate_to_tuple(conditions, variable_map)
-            print("predicate_tuple:", predicate_tuple)
+            # print("predicate_tuple:", predicate_tuple)
             if check_precon_idx:
-                print("Current self.precon_idx:", self.precon_idx)
+                # print("Current self.precon_idx:", self.precon_idx)
                 pass
             is_fact = self.check_fact(predicate_tuple)
             # print("is_fact:", is_fact)
@@ -1023,49 +1041,89 @@ class TestIF:
                 self.precon_idx += 1
                 self.precon_tuples.append((predicate_tuple, is_fact, self.precon_idx))
 
+            if precon_trace:
+                predicate_dict = {'predicate_tuple': predicate_tuple, 'checks_out': is_fact, 'precon_idx': self.precon_idx}
+                # print("predicate_dict:", predicate_dict)
+                return predicate_dict
+
             return is_fact
 
         if 'and' in conditions:
+            and_dict = {'and': list()}
+
             and_conditions_checklist = list()
             # print("And conditions:", conditions)
             conditions = conditions['and']
             # print("Extracted and conditions list:", conditions)
             for and_condition in conditions:
                 # print("and_condition:", and_condition)
-                checks_out = self.check_conditions(and_condition, variable_map, check_precon_idx=check_precon_idx)
-                # print("checks_out:", checks_out)
+
+                # checks_out = self.check_conditions(and_condition, variable_map, check_precon_idx=check_precon_idx, precon_trace=precon_trace)
+
+                checks_out = self.check_conditions(and_condition, variable_map, check_precon_idx=check_precon_idx, precon_trace=precon_trace)
+                # print("and item checks_out:", checks_out)
                 # since all facts need to check out for 'and' clauses, immediately return failure:
                 # if not checks_out:
                 #    return False
-                and_conditions_checklist.append(checks_out)
+                if precon_trace:
+                    and_conditions_checklist.append(checks_out['checks_out'])
+                    and_dict['and'].append(checks_out)
+                else:
+                    and_conditions_checklist.append(checks_out)
                 # print()
             # print("and_conditions_checklist:", and_conditions_checklist)
+
             # check if all conditions are true:
-            if not False in and_conditions_checklist:
-                return True
+            if precon_trace:
+                and_phrase_true = False
+                if not False in and_conditions_checklist:
+                    and_phrase_true = True
+                and_dict['checks_out'] = and_phrase_true
+                self.precon_trace.append(and_dict)
+                return and_dict
             else:
-                return False
+                if not False in and_conditions_checklist:
+                    return True
+                else:
+                    return False
 
         if 'or' in conditions:
+
+            or_dict = {'or': list()}
+
             or_conditions_checklist = list()
             # print("Or conditions:", conditions)
             conditions = conditions['or']
             # print("Extracted or conditions list:", conditions)
             for or_condition in conditions:
                 # print("or_condition:", or_condition)
-                checks_out = self.check_conditions(or_condition, variable_map, check_precon_idx=check_precon_idx)
-                # print("checks_out:", checks_out)
-                or_conditions_checklist.append(checks_out)
+                checks_out = self.check_conditions(or_condition, variable_map, check_precon_idx=check_precon_idx, precon_trace=precon_trace)
+                # print("or item checks_out:", checks_out)
+
+                if precon_trace:
+                    or_conditions_checklist.append(checks_out['checks_out'])
+                    or_dict['or'].append(checks_out)
+                else:
+                    or_conditions_checklist.append(checks_out)
                 # print()
             # print("or_conditions_checklist:", or_conditions_checklist)
-            # check if any condition is true:
-            if True in or_conditions_checklist:
-                return True
-            else:
-                # TODO: figure out 'or' condition fail feedback -> use first False? -> needs recording of 'not' phrase results
-                return False
 
-        # TODO: handle forall conditions
+            # check if any condition is true:
+            if precon_trace:
+                or_phrase_true = False
+                if True in or_conditions_checklist:
+                    or_phrase_true = True
+                or_dict['checks_out'] = or_phrase_true
+                self.precon_trace.append(or_dict)
+                return or_dict
+            else:
+                if True in or_conditions_checklist:
+                    return True
+                else:
+                    return False
+
+
+        # TODO?: handle forall conditions?
 
         # print()
 
@@ -1187,7 +1245,7 @@ class TestIF:
         when_conditions = when_clause[0]
         # print("when_conditions pre-and/or:", when_conditions)
 
-        checked_conditions = self.check_conditions(when_conditions, variable_map, check_precon_idx=False)
+        checked_conditions = self.check_conditions(when_conditions, variable_map, check_precon_idx=False, precon_trace=False)
         # print("checked_conditions:", checked_conditions)
 
         """
@@ -1321,6 +1379,7 @@ class TestIF:
         elif not effect_polarity:
             # print(f"Removing {effect_tuple} from world state.")
             self.world_state.remove(effect_tuple)
+            # TODO: handle removing non-fact tuples from optional argument actions
             resolve_effect_results['removed'].append(effect_tuple)
 
         return resolve_effect_results
@@ -1453,7 +1512,7 @@ class TestIF:
                     return False, feedback_str, {}
 
         # variable map is filled during parameter checking
-        print("variable_map pre-preconditions:", variable_map)
+        # print("variable_map pre-preconditions:", variable_map)
 
         # PRECONDITION
         preconditions: list = cur_action_def['interaction']['precondition'][0]
@@ -1461,11 +1520,10 @@ class TestIF:
         self.precon_idx = -1
         # self.precon_idx = 0
         self.precon_tuples = list()
+        self.precon_trace = list()
         checked_conditions = self.check_conditions(preconditions, variable_map)
         # print("Main action checked_conditions:",checked_conditions)
-        print("Checked precon tuples:", self.precon_tuples)
-
-        # TODO: handle recursive 'and'/'or' preconditions
+        # print("Checked precon tuples:", self.precon_tuples)
 
         """
         preconditions: list = cur_action_def['interaction']['precondition'][0]['and']
@@ -1585,16 +1643,48 @@ class TestIF:
             precon_idx += 1
         """
 
-        if checked_conditions:
-            # print("Preconditions fulfilled!")
+        # if checked_conditions:
+        if self.precon_trace[-1]['checks_out']:
+            print("Preconditions fulfilled!")
+
+            for item in reversed(self.precon_trace[-1]['and']):
+                # print(item)
+                # print("Checks out:", item['checks_out'])
+
+                if not item['checks_out']:
+                    print("Precon trace item does not check out:")
+                    print(item)
+                    if 'or' in item:
+                        print("or clause:")
+                        for or_item in item['or']:
+                            print(or_item)
+                            if 'and' in or_item:
+                                for and_item in or_item['and']:
+                                    if not and_item['checks_out']:
+                                        feedback_idx = and_item['precon_idx']
+                            elif 'predicate_tuple' in or_item:
+                                if not or_item['checks_out']:
+                                    feedback_idx = or_item['precon_idx']
+                    elif 'and' in item:
+                        feedback_idx = item['and'][-1]['precon_idx']
+                else:
+                    print("Precon trace item does check out:")
+                    print(item)
+                    if 'or' in item:
+                        print("or clause:")
+                        for or_item in item['or']:
+                            print("or_item:", or_item)
+                            if 'and' in or_item:
+                                for and_item in or_item['and']:
+                                    print("or and_item:", and_item)
+                # print("feedback idx of last failed item:", feedback_idx)
             pass
         else:
             print("Preconditions not fulfilled!")
             # get fail feedback template using precondition index:
             # print("Current precon_idx:", self.precon_idx)
 
-            # TODO: make this work reliably with 'or' phrase preconditions in the mix!
-
+            """
             # iterate backwards over check tuples and use last that doesn't check out:
             for checked_tuple in reversed(self.precon_tuples):
                 # print("checked_tuple:", checked_tuple)
@@ -1602,6 +1692,31 @@ class TestIF:
                     # print("checked_tuple[1] is falsy!")
                     feedback_idx = checked_tuple[2]
                     break
+            """
+            # print("Precon trace:", self.precon_trace)
+            # print("Last precon trace item:", self.precon_trace[-1])
+            # iterate over reverse
+            for item in reversed(self.precon_trace[-1]['and']):
+                # print(item)
+                # print("Checks out:", item['checks_out'])
+                if not item['checks_out']:
+                    print("Precon trace item does not check out:")
+                    print(item)
+                    if 'or' in item:
+                        print("or clause:")
+                        for or_item in item['or']:
+                            print(or_item)
+                            if 'and' in or_item:
+                                for and_item in or_item['and']:
+                                    if not and_item['checks_out']:
+                                        feedback_idx = and_item['precon_idx']
+                            elif 'predicate_tuple' in or_item:
+                                if not or_item['checks_out']:
+                                    feedback_idx = or_item['precon_idx']
+                    elif 'and' in item:
+                        feedback_idx = item['and'][-1]['precon_idx']
+
+            # TODO?: make this recursive like checking...?
 
             # feedback_template = cur_action_def['failure_feedback']['precondition'][self.precon_idx]
             feedback_template = cur_action_def['failure_feedback']['precondition'][feedback_idx]
@@ -1773,6 +1888,25 @@ test_instance = {"initial_state":{
                 "entity_definitions": ["home_entities.json"],
                 "domain_definitions": ["home_domain.json"]}
 """
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+""" 
 
 
 test_instance = {"initial_state":{
@@ -1792,7 +1926,7 @@ test_instance = {"initial_state":{
                 "room_definitions": ["home_rooms.json"],
                 "entity_definitions": ["home_entities.json"],
                 "domain_definitions": ["home_domain.json"]}
-
+"""
 
 
 test_interpreter = TestIF(test_instance)
@@ -1816,9 +1950,8 @@ test_interpreter = TestIF(test_instance)
 # action_input = {'type': "close", 'arg1': "refrigerator"}
 
 # action_input = {'type': "take", 'arg1': "apple"}
-action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
-
-# TODO: stop {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"} from revealing (non-)content of refrigerator
+# action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
+action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}  # TODO: fix 'The counter is not open.' feedback for this when apple is in (closed?) refrigerator
 
 
 action_resolve_result = test_interpreter.resolve_action(action_input)
