@@ -26,7 +26,7 @@
   {
     "type_name": "close",
     "lark": "close: CLOSE thing\nCLOSE.1: \"close\" WS",
-    "pddl": "(:action CLOSE\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (open ?e)\n        )\n    :effect (and\n        (closed ?e)\n        (not (open ?e))\n    )\n)",
+    "pddl": "(:action CLOSE\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (open ?e)\n        )\n    :effect (and\n        (closed ?e)\n        (not (open ?e))\n        (forall (?i - takeable)\n            (when\n                (in ?i ?e)\n                (and\n                    (not (accessible ?i))\n                )\n            )\n        )\n    )\n)",
     "pddl_parameter_mapping": {
       "?e": ["arg1"],
       "?r": ["current_player_room"],
@@ -50,7 +50,7 @@
   {
     "type_name": "take",
     "lark": "take: TAKE PREP* thing (PREP thing)*\nTAKE.1: (\"take\" | \"grab\" | \"pick\" | \"get\") WS",
-    "pddl": "(:action TAKE\n    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?s ?r)\n        (or\n            (and\n                (on ?e ?s)\n                (support ?s)\n                )\n            (and\n                (open ?s)\n                (container ?s)\n                (in ?e ?s)\n                )\n            )\n        )\n    :effect (and\n        (in ?e ?i)\n        (when\n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (not (on ?e ?s))\n            )\n        (when\n            (and\n                (container ?s)\n                (in ?e ?s)\n                )\n            (not (in ?e ?s))\n            )\n    )\n)",
+    "pddl": "(:action TAKE\n    :parameters (?e - takeable ?s - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?s ?r)\n        (accessible ?e)\n        (or\n            (and\n                (on ?e ?s)\n                (support ?s)\n                )\n            (and\n                (open ?s)\n                (container ?s)\n                (in ?e ?s)\n                )\n            )\n        )\n    :effect (and\n        (in ?e ?i)\n        (when\n            (and\n                (support ?s)\n                (on ?e ?s)\n                )\n            (not (on ?e ?s))\n            )\n        (when\n            (and\n                (container ?s)\n                (in ?e ?s)\n                )\n            (not (in ?e ?s))\n            )\n    )\n)",
     "pddl_parameter_mapping": {
       "?e": ["arg1"],
       "?s": ["arg2", "arg1_receptacle"],
@@ -70,6 +70,7 @@
         "You are not where you are! (This should not occur.)",
         "You can't see a {{ e }} here.",
         "You can't see a {{ s }} here.",
+        "You can't see a {{ e }} here.",
         "The {{ e }} is not on the {{ s }}.",
         "The {{ s }} is not a support.",
         "The {{ s }} is not open.",

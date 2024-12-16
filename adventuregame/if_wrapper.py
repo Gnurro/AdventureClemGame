@@ -721,6 +721,25 @@ class AdventureIFInterpreter(GameResourceLocator):
                 if not currently_supported:
                     facts_to_add.add(('on', fact[1], f'{fact[2]}floor'))
 
+        # make items that are not 'in' closed containers or 'in' inventory or 'on' supports 'accessible':
+        for fact in self.world_state:
+            if fact[1] in self.inst_to_type_dict:
+                if self.inst_to_type_dict[fact[1]] in self.entity_types:
+                    pass
+            if fact[0] == 'in' and ('container', fact[2]) in self.world_state:
+                container_currently_open = False
+                for state_pred2 in self.world_state:
+                    if state_pred2[0] == 'open' and state_pred2[1] == fact[2]:
+                        container_currently_open = True
+                        break
+                if container_currently_open:
+                    facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'in' and fact[2] == 'inventory':
+                # print(f"{fact[1]} in inventory!")
+                facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'on' and ('support', fact[2]) in self.world_state:
+                facts_to_add.add(('accessible', fact[1]))
+
         self.world_state = self.world_state.union(facts_to_add)
         # add initial world state to world state history:
         self.world_state_history.append(deepcopy(self.world_state))

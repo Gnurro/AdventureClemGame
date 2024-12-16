@@ -8,5 +8,13 @@
     :effect (and
         (closed ?e)
         (not (open ?e))
+        (forall (?i - takeable)
+            (when
+                (in ?i ?e)
+                (and
+                    (not (accessible ?i))
+                )
+            )
+        )
     )
 )

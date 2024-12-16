@@ -710,6 +710,25 @@ class TestIF:
                 if not currently_supported:
                     facts_to_add.add(('on', fact[1], f'{fact[2]}floor'))
 
+        # make items that are not 'in' closed containers or 'in' inventory 'accessible':
+        for fact in self.world_state:
+            if fact[1] in self.inst_to_type_dict:
+                if self.inst_to_type_dict[fact[1]] in self.entity_types:
+                    pass
+            if fact[0] == 'in' and ('container', fact[2]) in self.world_state:
+                container_currently_open = False
+                for state_pred2 in self.world_state:
+                    if state_pred2[0] == 'open' and state_pred2[1] == fact[2]:
+                        container_currently_open = True
+                        break
+                if container_currently_open:
+                    facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'in' and fact[2] == 'inventory':
+                # print(f"{fact[1]} in inventory!")
+                facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'on' and ('support', fact[2]) in self.world_state:
+                facts_to_add.add(('accessible', fact[1]))
+
         self.world_state = self.world_state.union(facts_to_add)
         # add initial world state to world state history:
         self.world_state_history.append(deepcopy(self.world_state))
@@ -1838,7 +1857,7 @@ test_instance = {"initial_state":{
                     "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
                     "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
                     "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "closed(refrigerator1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
                     "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
                     },
                 "action_definitions": ["basic_actions_v2.json"],
@@ -1849,6 +1868,19 @@ test_instance = {"initial_state":{
 
 test_interpreter = TestIF(test_instance)
 
+"""
+for fact in test_interpreter.world_state:
+    if fact[0] == "in":
+        print(fact)
+        for fact2 in test_interpreter.world_state:
+            if fact[1] in fact2:
+                print(fact2)
+"""
+"""
+print(f"Inventory is a container: {('container', 'inventory') in test_interpreter.world_state}")
+print(f"Inventory is open: {('open', 'inventory') in test_interpreter.world_state}")
+print(f"Inventory is closed: {('closed', 'inventory') in test_interpreter.world_state}")
+"""
 # print("Pre-action world state:", test_interpreter.world_state)
 
 # action_input = {'type': "go", 'arg1': "kitchen"}
@@ -1867,11 +1899,9 @@ test_interpreter = TestIF(test_instance)
 
 # action_input = {'type': "open", 'arg1': "refrigerator"}
 
-# action_input = {'type': "close", 'arg1': "refrigerator"}
+action_input = {'type': "close", 'arg1': "refrigerator"}
 
-action_input = {'type': "take", 'arg1': "apple"} # TODO: Fix 'The refrigerator is not a support.' when fridge closed -> optionals handling!
-# TODO: Improve handling of optional action arguments -> prevent this from essentially showing hidden locations!
-# TODO: Add 'visible' predicate facts to handle this?
+# action_input = {'type': "take", 'arg1': "apple"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}
 
@@ -1882,8 +1912,10 @@ print("action_resolve_result:", action_resolve_result)
 # print("Post-action world state:", test_interpreter.world_state)
 
 # ACTION 2
-"""
-action_input = {'type': "go", 'arg1': "kitchen"}
+
+action_input = {'type': "take", 'arg1': "apple"}
+
+# action_input = {'type': "go", 'arg1': "kitchen"}
 action_resolve_result = test_interpreter.resolve_action(action_input)
 print("action_resolve_result:", action_resolve_result)
-"""
+

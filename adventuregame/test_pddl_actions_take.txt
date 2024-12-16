@@ -4,6 +4,7 @@
         (at ?p ?r)
         (at ?e ?r)
         (at ?s ?r)
+        (accessible ?e)
         (or
             (and
                 (on ?e ?s)
