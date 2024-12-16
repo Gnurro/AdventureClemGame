@@ -10,9 +10,9 @@
                 (on ?e ?s)
                 )
             (and
+                (open ?s)
                 (container ?s)
                 (in ?e ?s)
-                (open ?s)
                 )
             )
         )

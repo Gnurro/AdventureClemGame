@@ -1646,77 +1646,40 @@ class TestIF:
         # if checked_conditions:
         if self.precon_trace[-1]['checks_out']:
             print("Preconditions fulfilled!")
-
-            for item in reversed(self.precon_trace[-1]['and']):
-                # print(item)
-                # print("Checks out:", item['checks_out'])
-
-                if not item['checks_out']:
-                    print("Precon trace item does not check out:")
-                    print(item)
-                    if 'or' in item:
-                        print("or clause:")
-                        for or_item in item['or']:
-                            print(or_item)
-                            if 'and' in or_item:
-                                for and_item in or_item['and']:
-                                    if not and_item['checks_out']:
-                                        feedback_idx = and_item['precon_idx']
-                            elif 'predicate_tuple' in or_item:
-                                if not or_item['checks_out']:
-                                    feedback_idx = or_item['precon_idx']
-                    elif 'and' in item:
-                        feedback_idx = item['and'][-1]['precon_idx']
-                else:
-                    print("Precon trace item does check out:")
-                    print(item)
-                    if 'or' in item:
-                        print("or clause:")
-                        for or_item in item['or']:
-                            print("or_item:", or_item)
-                            if 'and' in or_item:
-                                for and_item in or_item['and']:
-                                    print("or and_item:", and_item)
-                # print("feedback idx of last failed item:", feedback_idx)
             pass
         else:
             print("Preconditions not fulfilled!")
-            # get fail feedback template using precondition index:
-            # print("Current precon_idx:", self.precon_idx)
 
-            """
-            # iterate backwards over check tuples and use last that doesn't check out:
-            for checked_tuple in reversed(self.precon_tuples):
-                # print("checked_tuple:", checked_tuple)
-                if not checked_tuple[1]:
-                    # print("checked_tuple[1] is falsy!")
-                    feedback_idx = checked_tuple[2]
-                    break
-            """
-            # print("Precon trace:", self.precon_trace)
-            # print("Last precon trace item:", self.precon_trace[-1])
-            # iterate over reverse
-            for item in reversed(self.precon_trace[-1]['and']):
-                # print(item)
-                # print("Checks out:", item['checks_out'])
-                if not item['checks_out']:
-                    print("Precon trace item does not check out:")
-                    print(item)
-                    if 'or' in item:
-                        print("or clause:")
-                        for or_item in item['or']:
-                            print(or_item)
-                            if 'and' in or_item:
-                                for and_item in or_item['and']:
-                                    if not and_item['checks_out']:
-                                        feedback_idx = and_item['precon_idx']
-                            elif 'predicate_tuple' in or_item:
-                                if not or_item['checks_out']:
-                                    feedback_idx = or_item['precon_idx']
-                    elif 'and' in item:
-                        feedback_idx = item['and'][-1]['precon_idx']
+            # NOTE: The first precondition fact that does not check out is used for feedback. This means that the order
+            # of predicates (and clauses) in the precondition PDDL for the action determines feedback priority!
 
-            # TODO?: make this recursive like checking...?
+            def feedback_idx_from_precon_trace(precon_trace):
+                # iterate over precon trace:
+                for item in precon_trace[-1]['and']:
+                    # print("precon_trace item:", item)
+                    # print("Checks out:", item['checks_out'])
+                    if not item['checks_out']:
+                        # print("Precon trace item does not check out:")
+                        # print(item)
+                        if 'or' in item:
+                            # print("or clause:", item)
+                            for or_item in item['or']:
+                                # print("or_item:", or_item)
+                                if 'and' in or_item:
+                                    for and_item in or_item['and']:
+                                        if not and_item['checks_out']:
+                                            # print("or and_item does not check out:", and_item)
+                                            feedback_idx = and_item['precon_idx']
+                                            return feedback_idx
+                                elif 'predicate_tuple' in or_item:
+                                    if not or_item['checks_out']:
+                                        feedback_idx = or_item['precon_idx']
+                                        return feedback_idx
+                        elif 'and' in item:
+                            feedback_idx = item['and'][-1]['precon_idx']
+                            return feedback_idx
+
+            feedback_idx = feedback_idx_from_precon_trace(self.precon_trace)
 
             # feedback_template = cur_action_def['failure_feedback']['precondition'][self.precon_idx]
             feedback_template = cur_action_def['failure_feedback']['precondition'][feedback_idx]
