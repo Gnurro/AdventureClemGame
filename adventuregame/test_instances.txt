@@ -1,0 +1,128 @@
+"""
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,hallway1)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    # "exit(kitchen1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,hallway1)",
+                    "type(apple1,apple)", "takeable(apple1)",
+                    "in(apple1,inventory)", "at(apple1,hallway1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    # "exit(kitchen1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,hallway1)",
+                    "type(apple1,apple)", "takeable(apple1)",
+                    "in(apple1,inventory)", "at(apple1,hallway1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,inventory)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+"""
+"""
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "closed(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "open(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+"""
+"""
+
+
+test_instance = {"initial_state":{
+                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
+                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
+                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
+                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
+                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
+                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
+                    "on(apple1,counter1)", "at(apple1,kitchen1)",
+                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
+                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
+                    "container(refrigerator1)", "closed(refrigerator1)",
+                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
+                    },
+                "action_definitions": ["basic_actions_v2.json"],
+                "room_definitions": ["home_rooms.json"],
+                "entity_definitions": ["home_entities.json"],
+                "domain_definitions": ["home_domain.json"]}
+"""

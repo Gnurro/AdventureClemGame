@@ -5,11 +5,11 @@
         (at ?e ?r)
         (at ?t ?r)
         (or
-            (support ?t)
             (and
                 (container ?t)
                 (open ?t)
                 )
+            (support ?t)
             )
         )
     :effect (and

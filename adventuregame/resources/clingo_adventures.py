@@ -103,7 +103,7 @@ class ClingoAdventureGenerator(object):
             clingo_str += "\n" + type_atom
 
             # add floor to room:
-            floor_id = f"{room_id}floor"
+            floor_id = f"{room_id}floor1"
             floor_atom = f"type({floor_id},floor)."
             # Ex: type(kitchen1floor,floor) = there is an entity kitchen1floor which has the entity type floor
             clingo_str += "\n" + floor_atom

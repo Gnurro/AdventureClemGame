@@ -671,9 +671,9 @@ class TestIF:
         # add floors to rooms:
         for fact in self.world_state:
             if fact[0] == 'room':
-                facts_to_add.add(('type', f'{fact[1]}floor', 'floor'))
+                facts_to_add.add(('type', f'{fact[1]}floor1', 'floor'))
                 # add floor:
-                facts_to_add.add(('at', f'{fact[1]}floor', fact[1]))
+                facts_to_add.add(('at', f'{fact[1]}floor1', fact[1]))
 
         self.world_state = self.world_state.union(facts_to_add)
 
@@ -757,9 +757,10 @@ class TestIF:
 
     def get_player_room_contents_visible(self) -> List:
         """
-        Get the 'visible' contents of the current room.
-        This is also used to determine if an entity is accessible for interaction. Entities 'in' closed entities are not
-        returned.
+        Get the visible contents of the current room.
+        Entities 'in' closed entities are not returned.
+        In v2, this is NO LONGER used to determine if an entity is accessible for interaction - this is handled via PDDL
+        action definition now.
         """
         room_contents = self.get_player_room_contents()
         visible_contents = list()
@@ -774,6 +775,7 @@ class TestIF:
                 # check if entity is 'in' closed container:
                 if fact[0] == 'in' and fact[1] == thing:
                     contained_in = fact[2]
+                    # print(f"{thing} is contained in {contained_in}")
                     for state_pred2 in self.world_state:
                         if state_pred2[0] == 'closed' and state_pred2[1] == contained_in:
                             # not visible/accessible in closed container
@@ -782,7 +784,7 @@ class TestIF:
                             visible_contents.append(thing)
                             break
                         elif state_pred2[1] == 'inventory' and state_pred2[1] == contained_in:
-                            visible_contents.append(thing)
+                            # inventory content is not visible
                             break
             if contained_in:
                 continue
@@ -827,6 +829,7 @@ class TestIF:
 
         # get visible room content:
         internal_visible_contents = self.get_player_room_contents_visible()
+        # print("internal_visible_contents:", internal_visible_contents)
 
         # convert to types:
         visible_contents = [self._get_inst_str(instance) for instance in internal_visible_contents]
@@ -881,14 +884,39 @@ class TestIF:
 
         return room_description
 
-    def get_inventory_content(self, player: str = 'player1') -> list:
-        # single-player for now, so default to player1
+    def get_inventory_content(self) -> list:
         inventory_content = list()
         for fact in self.world_state:
             if fact[0] == 'in' and fact[2] == 'inventory':
                 inventory_content.append(fact[1])
 
         return inventory_content
+
+    def get_container_content(self, container_id) -> list:
+        container_content = list()
+        for fact in self.world_state:
+            if fact[0] == 'in' and fact[2] == container_id:
+                container_content.append(fact[1])
+
+        return container_content
+
+    def get_container_content_desc(self, container_id) -> str:
+        container_repr = self._get_inst_str(container_id)
+        container_content = self.get_container_content(container_id)
+        container_item_cnt = len(container_content)
+        if container_item_cnt == 0:
+            content_desc = f"The {container_repr} is empty."
+            return content_desc
+        elif container_item_cnt == 1:
+            inv_str = f"a {self._get_inst_str(container_content[0])}"
+            content_desc = f"In the {container_repr} there is {inv_str}."
+        else:
+            content_strs = [f"a {self._get_inst_str(container_item)}" for container_item in container_content]
+            content_str = ", ".join(content_strs[:-1])
+            content_str += f" and {content_strs[-1]}"
+            content_desc = f"In the {container_repr} there are {content_str}."
+
+        return content_desc
 
     def check_fact(self, fact_tuple) -> bool:
         """Check if a fact tuple is in the world state."""
@@ -946,8 +974,7 @@ class TestIF:
             # print("tuple_arg:", tuple_arg)
             type_matched_instances = list()
             if tuple_arg:
-                if not tuple_arg.endswith(
-                    ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "floor")):  # TODO: floor hardcode removal
+                if not tuple_arg.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                     # print(f"{tuple_arg} is not a type instance ID!")
                     # go over world state facts to find room or type predicate:
                     for fact in self.world_state:
@@ -956,11 +983,11 @@ class TestIF:
                             if fact[2] == tuple_arg:
                                 # print(f"{fact[0]} predicate fact found:", fact)
                                 type_matched_instances.append(fact[1])
-                        # TODO: fail if there is no type-fitting instance in world state
+                        # TODO?: fail if there is no type-fitting instance in world state?
 
                     # print(type_matched_instances)
 
-                    # NB: assume all room and entity types have only a single instance in the adventure!
+                    # NOTE: This assumes all room and entity types have only a single instance in the adventure!
 
                     # replace corresponding variable_map value with instance ID:
                     for variable in variable_map:
@@ -993,12 +1020,11 @@ class TestIF:
         return predicate_tuple
 
     def check_conditions(self, conditions, variable_map, check_precon_idx = True, precon_trace = True) -> bool:
-        """Check if a passed condition 'and'/'or' clause is true."""
+        """Check if a passed condition 'and'/'or' clause is true.
+        Full action preconditions must have a root 'and' clause!
+        """
+        # print()
         # print("check_conditions input conditions:", conditions)
-
-        # TODO: handle precondition predicate index for action precondition feedback
-
-        # conditions_trace = deepcopy(prior_conditions_trace)
 
         if 'not' in conditions:
             # print("'Not' phrase condition.")
@@ -1080,6 +1106,7 @@ class TestIF:
                     and_phrase_true = True
                 and_dict['checks_out'] = and_phrase_true
                 self.precon_trace.append(and_dict)
+                # print("and_dict:", and_dict)
                 return and_dict
             else:
                 if not False in and_conditions_checklist:
@@ -1102,6 +1129,7 @@ class TestIF:
 
                 if precon_trace:
                     or_conditions_checklist.append(checks_out['checks_out'])
+                    # print("or_conditions_checklist:", or_conditions_checklist)
                     or_dict['or'].append(checks_out)
                 else:
                     or_conditions_checklist.append(checks_out)
@@ -1111,6 +1139,7 @@ class TestIF:
             # check if any condition is true:
             if precon_trace:
                 or_phrase_true = False
+                # print("or_conditions_checklist:", or_conditions_checklist)
                 if True in or_conditions_checklist:
                     or_phrase_true = True
                 or_dict['checks_out'] = or_phrase_true
@@ -1123,7 +1152,7 @@ class TestIF:
                     return False
 
 
-        # TODO?: handle forall conditions?
+        # NOTE: Handling forall conditions not implemented due to time constraints.
 
         # print()
 
@@ -1131,7 +1160,6 @@ class TestIF:
 
 
     def resolve_forall(self, forall_clause, variable_map):
-        # TODO: make this work for preconditions as well
         # print("forall effect:", forall_clause)
         forall_type = forall_clause['forall']
         # print("forall_type:", forall_type)
@@ -1155,16 +1183,16 @@ class TestIF:
                 forall_items = all_entities_list
         elif 'type_list' in forall_type:
             # TODO?: iterate over multiple type list variables?
-            # print("Type list forall_type:", forall_type)
+            print("Type list forall_type:", forall_type)
             forall_type_list = forall_type['type_list']
-            # print("forall_type_list:", forall_type_list)
+            print("forall_type_list:", forall_type_list)
             for type_list_element in forall_type_list:
                 type_list_type = type_list_element['type_list_element']
                 for type_list_item in type_list_element['items']:
-                    # print("type_list_item:", type_list_item)
+                    print("type_list_item:", type_list_item)
                     if 'variable' in type_list_item:
                         type_list_item_variable = type_list_item['variable']
-                        # print("type_list_item_variable:", type_list_item_variable)
+                        print("type_list_item_variable:", type_list_item_variable)
                         # get all type-matched objects:
                         type_matched_objects = list()
                         for fact in self.world_state:
@@ -1174,9 +1202,9 @@ class TestIF:
                         # assign all matched objects to forall variable map:
                         forall_variable_map[type_list_item_variable] = type_matched_objects
 
-        # print("forall_variable_map:", forall_variable_map)
+        print("forall_variable_map:", forall_variable_map)
 
-        # NOTE: for now only covering forall with a single variable/type to iterate over
+        # NOTE: For now only covering forall with a single variable/type to iterate over, due to time constraints.
 
         for iterated_variable, iterated_values in forall_variable_map.items():
             # print("iterated_variable:", iterated_variable)
@@ -1378,8 +1406,8 @@ class TestIF:
             resolve_effect_results['added'].append(effect_tuple)
         elif not effect_polarity:
             # print(f"Removing {effect_tuple} from world state.")
-            self.world_state.remove(effect_tuple)
-            # TODO: handle removing non-fact tuples from optional argument actions
+            if effect_tuple in self.world_state:
+                self.world_state.remove(effect_tuple)
             resolve_effect_results['removed'].append(effect_tuple)
 
         return resolve_effect_results
@@ -1470,7 +1498,7 @@ class TestIF:
                 # check type match:
                 # assume all world state instance IDs end in numbers:
                 if variable_map[var_id]:
-                    if variable_map[var_id].endswith(("0","1","2","3","4","5","6","7","8","9","floor")):  # TODO: floor hardcode removal
+                    if variable_map[var_id].endswith(("0","1","2","3","4","5","6","7","8","9")):
                         var_type = self.inst_to_type_dict[variable_map[var_id]]
                     else:
                         # assume that other strings are essentially type strings:
@@ -1483,7 +1511,7 @@ class TestIF:
                 # DOMAIN TYPE CHECK
                 type_matched = False
                 if type(var_type) == str:
-                    # TODO: handle inventory contents - does it make sense to handle them as a list like this in the first place?
+                    # NOTE: Inventory contents are handled via effects PDDL forall now.
                     if var_type in self.domain['supertypes']:
                         # print("domain supertypes for current var_type:", self.domain['supertypes'][var_type])
                         pass
@@ -1495,7 +1523,7 @@ class TestIF:
                         type_matched = True
                     # print("type matched:", type_matched)
                 else:
-                    # just pass through for now, see TODO above
+                    # Fallback for edge cases
                     type_matched = True
 
                 if not type_matched:
@@ -1508,7 +1536,7 @@ class TestIF:
                     jinja_args = {var_id: variable_map[var_id]}
                     feedback_str = feedback_jinja.render(jinja_args)
                     feedback_str = feedback_str.capitalize()
-                    print("parameter fail:", feedback_str)
+                    # print("parameter fail:", feedback_str)
                     return False, feedback_str, {}
 
         # variable map is filled during parameter checking
@@ -1676,8 +1704,17 @@ class TestIF:
                                         feedback_idx = or_item['precon_idx']
                                         return feedback_idx
                         elif 'and' in item:
-                            feedback_idx = item['and'][-1]['precon_idx']
-                            return feedback_idx
+                            for and_item in item['and']:
+                                if not and_item['checks_out']:
+                                    # print("or and_item does not check out:", and_item)
+                                    feedback_idx = and_item['precon_idx']
+                                    return feedback_idx
+                        elif 'predicate_tuple' in item:
+                            if not item['checks_out']:
+                                feedback_idx = item['precon_idx']
+                                return feedback_idx
+
+            # TODO?: Make feedback_idx extraction from precon_trace recursive for optimal robustness?
 
             feedback_idx = feedback_idx_from_precon_trace(self.precon_trace)
 
@@ -1747,11 +1784,21 @@ class TestIF:
         if "room_desc" in success_feedback_template:
             jinja_args["room_desc"] = self.get_full_room_desc()
         if "prep" in success_feedback_template:
-            jinja_args["prep"] = action_dict['prep']
-            # TODO: make this feedback not rely on input command prep value, but actual action result
-
-        # TODO: reveal contents of opened containers
-        # TODO: don't mention inventory contents on room transition
+            if "prep" in action_dict:
+                jinja_args["prep"] = action_dict['prep']
+            else:
+                # get preposition fact from world state effects:
+                for added_fact in world_state_effects['added']:
+                    if added_fact[0] in ['in', 'on']:
+                        jinja_args["prep"] = added_fact[0]
+                        break
+        if "container_content" in success_feedback_template:
+            # get opened container fact from world state effects:
+            for added_fact in world_state_effects['added']:
+                if added_fact[0] == "open":
+                    opened_container_id = added_fact[1]
+                    break
+            jinja_args["container_content"] = self.get_container_content_desc(opened_container_id)
 
         feedback_str = feedback_jinja.render(jinja_args)
         # feedback_str = feedback_str.capitalize()
@@ -1761,78 +1808,6 @@ class TestIF:
         return True, feedback_str, {}
 
 
-
-"""
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,hallway1)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
-                    # "exit(kitchen1,hallway1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,hallway1)",
-                    "type(apple1,apple)", "takeable(apple1)",
-                    "in(apple1,inventory)", "at(apple1,hallway1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-
-
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,kitchen1)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
-                    # "exit(kitchen1,hallway1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,hallway1)",
-                    "type(apple1,apple)", "takeable(apple1)",
-                    "in(apple1,inventory)", "at(apple1,hallway1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-
-
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,kitchen1)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
-                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
-                    "in(apple1,inventory)", "at(apple1,kitchen1)",
-                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
-                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "open(refrigerator1)",
-                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-"""
-"""
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
-                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
-                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
-                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
-                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "open(refrigerator1)",
-                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-
-
 test_instance = {"initial_state":{
                     "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
                     "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
@@ -1850,46 +1825,6 @@ test_instance = {"initial_state":{
                 "room_definitions": ["home_rooms.json"],
                 "entity_definitions": ["home_entities.json"],
                 "domain_definitions": ["home_domain.json"]}
-"""
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
-                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
-                    "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
-                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
-                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "open(refrigerator1)",
-                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-
-""" 
-
-
-test_instance = {"initial_state":{
-                    "type(player1,player)", "at(player1,kitchen1)", "type(inventory,inventory)",
-                    "room(hallway1,hallway)", "room(kitchen1,kitchen)", "room(bedroom1,bedroom)",
-                    "exit(kitchen1,hallway1)", "exit(hallway1,kitchen1)", "exit(hallway1,bedroom1)", "exit(bedroom1,hallway1)",
-                    "type(sandwich1,sandwich)", "takeable(sandwich1)", "needs_support(sandwich1)",
-                    "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
-                    "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
-                    "on(apple1,counter1)", "at(apple1,kitchen1)",
-                    "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
-                    "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "closed(refrigerator1)",
-                    "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
-                    },
-                "action_definitions": ["basic_actions_v2.json"],
-                "room_definitions": ["home_rooms.json"],
-                "entity_definitions": ["home_entities.json"],
-                "domain_definitions": ["home_domain.json"]}
-"""
 
 
 test_interpreter = TestIF(test_instance)
@@ -1897,12 +1832,14 @@ test_interpreter = TestIF(test_instance)
 # print("Pre-action world state:", test_interpreter.world_state)
 
 # action_input = {'type': "go", 'arg1': "kitchen"}
-# action_input = {'type': "go", 'arg1': "hallway"}
+action_input = {'type': "go", 'arg1': "hallway"}
 # action_input = {'type': "go", 'arg1': "balcony"}
 # action_input = {'type': "go", 'arg1': "bedroom"}
 
 # action_input = {'type': "put", 'arg1': "apple", 'arg2': "counter"}
 # action_input = {'type': "put", 'arg1': "apple", 'arg2': "counter", 'prep': "on"}
+# action_input = {'type': "put", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "in"}
+
 
 # action_input = {'type': "put", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "in"}
 
@@ -1914,10 +1851,17 @@ test_interpreter = TestIF(test_instance)
 
 # action_input = {'type': "take", 'arg1': "apple"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
-action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}  # TODO: fix 'The counter is not open.' feedback for this when apple is in (closed?) refrigerator
+# action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}
 
 
 action_resolve_result = test_interpreter.resolve_action(action_input)
 print("action_resolve_result:", action_resolve_result)
 
 # print("Post-action world state:", test_interpreter.world_state)
+
+# ACTION 2
+"""
+action_input = {'type': "go", 'arg1': "kitchen"}
+action_resolve_result = test_interpreter.resolve_action(action_input)
+print("action_resolve_result:", action_resolve_result)
+"""

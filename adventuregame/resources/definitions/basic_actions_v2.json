@@ -20,7 +20,7 @@
         "The {{ e }} is not closed."
       ]
     },
-    "success_feedback": "The {{ e }} is now open.",
+    "success_feedback": "The {{ e }} is now open. {{ container_content }}",
     "asp": "{ action_t(TURN,open,THING):at_t(TURN,THING,ROOM),closed_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nopen_t(TURN+1,THING) :- action_t(TURN,open,THING).\nopen_t(TURN+1,THING) :- turn(TURN), open_t(TURN,THING), not action_t(TURN,close,THING)."
   },
   {
@@ -83,7 +83,7 @@
   {
     "type_name": "put",
     "lark": "put: PUT thing (\"back\" WS)* PREP* thing\nPUT.1: (\"put\" | \"leave\" | \"place\" | \"drop\") WS",
-    "pddl": "(:action PUT\n    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?t ?r)\n        (or\n            (support ?t)\n            (and\n                (container ?t)\n                (open ?t)\n                )\n            )\n        )\n    :effect (and\n        (not (in ?e ?i))\n        (when\n            (support ?t)\n            (on ?e ?t)\n            )\n        (when\n            (container ?t)\n            (in ?e ?t)\n            )\n        )\n)",
+    "pddl": "(:action PUT\n    :parameters (?e - movable ?t - receptacle ?p - player ?i - inventory ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (at ?t ?r)\n        (or\n            (and\n                (container ?t)\n                (open ?t)\n                )\n            (support ?t)\n            )\n        )\n    :effect (and\n        (not (in ?e ?i))\n        (when\n            (support ?t)\n            (on ?e ?t)\n            )\n        (when\n            (container ?t)\n            (in ?e ?t)\n            )\n        )\n)",
     "pddl_parameter_mapping": {
       "?e": ["arg1"],
       "?t": ["arg2"],
@@ -103,9 +103,9 @@
         "You are not where you are! (This should not occur.)",
         "You can't see a {{ e }} here.",
         "You can't see a {{ t }} here.",
-        "The {{ t }} is not a support.",
         "The {{ t }} is not a container.",
-        "The {{ t }} is not open."
+        "The {{ t }} is not open.",
+        "The {{ t }} is not a support."
       ]
     },
     "success_feedback": "You put the {{ e }} {{ prep }} the {{ t }}.",

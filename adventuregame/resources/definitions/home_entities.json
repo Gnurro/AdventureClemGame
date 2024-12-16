@@ -7,8 +7,8 @@
   {
     "type_name": "inventory",
     "repr_str": "inventory",
+    "hidden": true,
     "container": true,
-    "openable": true,
     "traits": ["container"]
   },
   {
