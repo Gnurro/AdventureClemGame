@@ -6,8 +6,8 @@
         (at ?s ?r)
         (or
             (and
-                (support ?s)
                 (on ?e ?s)
+                (support ?s)
                 )
             (and
                 (open ?s)

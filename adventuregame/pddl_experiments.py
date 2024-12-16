@@ -918,6 +918,26 @@ class TestIF:
 
         return content_desc
 
+    def get_inventory_desc(self) -> str:
+        """Get a text description of the current inventory content.
+        Used for feedback for 'take' action.
+        """
+        inventory_content: list = self.get_inventory_content()
+        inv_list = list(inventory_content)
+        inv_item_cnt = len(inv_list)
+        if inv_item_cnt == 0:
+            inv_desc = "Your inventory is empty."
+            return inv_desc
+        elif inv_item_cnt == 1:
+            inv_str = f"a {self._get_inst_str(inv_list[0])}"
+        else:
+            inv_strs = [f"a {self._get_inst_str(inv_item)}" for inv_item in inv_list]
+            inv_str = ", ".join(inv_strs[:-1])
+            inv_str += f" and {inv_strs[-1]}"
+        inv_desc = f"In your inventory you have {inv_str}."
+
+        return inv_desc
+
     def check_fact(self, fact_tuple) -> bool:
         """Check if a fact tuple is in the world state."""
         # print("Checking for", fact_tuple)
@@ -1157,7 +1177,6 @@ class TestIF:
         # print()
 
         return False
-
 
     def resolve_forall(self, forall_clause, variable_map):
         # print("forall effect:", forall_clause)
@@ -1411,7 +1430,6 @@ class TestIF:
             resolve_effect_results['removed'].append(effect_tuple)
 
         return resolve_effect_results
-
 
     def resolve_action(self, action_dict: dict) -> [bool, Union[Set, str], Union[dict, Set]]:
         # print("resolve_action input action_dict:", action_dict)
@@ -1783,6 +1801,8 @@ class TestIF:
         jinja_args: dict = clean_feedback_variable_map
         if "room_desc" in success_feedback_template:
             jinja_args["room_desc"] = self.get_full_room_desc()
+        if "inventory_desc" in success_feedback_template:
+            jinja_args["inventory_desc"] = self.get_inventory_desc()
         if "prep" in success_feedback_template:
             if "prep" in action_dict:
                 jinja_args["prep"] = action_dict['prep']
@@ -1832,7 +1852,7 @@ test_interpreter = TestIF(test_instance)
 # print("Pre-action world state:", test_interpreter.world_state)
 
 # action_input = {'type': "go", 'arg1': "kitchen"}
-action_input = {'type': "go", 'arg1': "hallway"}
+# action_input = {'type': "go", 'arg1': "hallway"}
 # action_input = {'type': "go", 'arg1': "balcony"}
 # action_input = {'type': "go", 'arg1': "bedroom"}
 
@@ -1849,7 +1869,9 @@ action_input = {'type': "go", 'arg1': "hallway"}
 
 # action_input = {'type': "close", 'arg1': "refrigerator"}
 
-# action_input = {'type': "take", 'arg1': "apple"}
+action_input = {'type': "take", 'arg1': "apple"} # TODO: Fix 'The refrigerator is not a support.' when fridge closed -> optionals handling!
+# TODO: Improve handling of optional action arguments -> prevent this from essentially showing hidden locations!
+# TODO: Add 'visible' predicate facts to handle this?
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}
 
