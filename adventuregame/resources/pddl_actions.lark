@@ -8,7 +8,7 @@ parameters: ":parameters" WS (type_list | pred) WS+
 precondition: ":precondition" WS (andp | orp) WS+
 effect: ":effect" WS andp WS+
 
-andp: ANDL WS+ ((type_list | pred | notp | forall | equal | orp | when) WS*)+ ")" WS*
+andp: ANDL WS+ ((type_list | pred | notp | forall | equal | orp | when) WS*)* ")" WS*
 ANDL.1: "(and"
 
 orp: ORL WS+ ((type_list | pred | notp | forall | equal | andp) WS*)+ ")" WS*

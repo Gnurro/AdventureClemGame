@@ -21,7 +21,9 @@
       ]
     },
     "success_feedback": "The {{ e }} is now open. {{ container_content }}",
-    "asp": "{ action_t(TURN,open,THING):at_t(TURN,THING,ROOM),closed_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nopen_t(TURN+1,THING) :- action_t(TURN,open,THING).\nopen_t(TURN+1,THING) :- turn(TURN), open_t(TURN,THING), not action_t(TURN,close,THING)."
+    "asp": "{ action_t(TURN,open,THING):at_t(TURN,THING,ROOM),closed_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nopen_t(TURN+1,THING) :- action_t(TURN,open,THING).\nopen_t(TURN+1,THING) :- turn(TURN), open_t(TURN,THING), not action_t(TURN,close,THING).",
+    "epistemic": true,
+    "pragmatic": true
   },
   {
     "type_name": "close",
@@ -45,7 +47,9 @@
       ]
     },
     "success_feedback": "The {{ e }} is now closed.",
-    "asp": "{ action_t(TURN,close,THING):at_t(TURN,THING,ROOM),open_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nclosed_t(TURN+1,THING) :- action_t(TURN,close,THING).\nclosed_t(TURN+1,THING) :- turn(TURN), closed_t(TURN,THING), not action_t(TURN,open,THING)."
+    "asp": "{ action_t(TURN,close,THING):at_t(TURN,THING,ROOM),open_t(TURN,THING) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nclosed_t(TURN+1,THING) :- action_t(TURN,close,THING).\nclosed_t(TURN+1,THING) :- turn(TURN), closed_t(TURN,THING), not action_t(TURN,open,THING).",
+    "epistemic": false,
+    "pragmatic": false
   },
   {
     "type_name": "take",
@@ -79,7 +83,9 @@
       ]
     },
     "success_feedback": "You take the {{ e }}. {{ inventory_desc }}",
-    "asp": "{ action_t(TURN,take,THING):at_t(TURN,THING,ROOM),takeable(THING),in_t(TURN,THING,CONTAINER),open_t(TURN,CONTAINER),at_t(TURN,player1,ROOM);action_t(TURN,take,THING):at_t(TURN,THING,ROOM),takeable(THING),on_t(TURN,THING,SUPPORT),support(SUPPORT),at_t(TURN,player1,ROOM) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nin_t(TURN+1,THING,inventory) :- action_t(TURN,take,THING).\nin_t(TURN+1,THING,TARGET) :- turn(TURN), in_t(TURN,THING,TARGET), not action_t(TURN,take,THING), TARGET != inventory.\non_t(TURN+1,THING,TARGET) :- turn(TURN), on_t(TURN,THING,TARGET), not action_t(TURN,take,THING)."
+    "asp": "{ action_t(TURN,take,THING):at_t(TURN,THING,ROOM),takeable(THING),in_t(TURN,THING,CONTAINER),open_t(TURN,CONTAINER),at_t(TURN,player1,ROOM);action_t(TURN,take,THING):at_t(TURN,THING,ROOM),takeable(THING),on_t(TURN,THING,SUPPORT),support(SUPPORT),at_t(TURN,player1,ROOM) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nin_t(TURN+1,THING,inventory) :- action_t(TURN,take,THING).\nin_t(TURN+1,THING,TARGET) :- turn(TURN), in_t(TURN,THING,TARGET), not action_t(TURN,take,THING), TARGET != inventory.\non_t(TURN+1,THING,TARGET) :- turn(TURN), on_t(TURN,THING,TARGET), not action_t(TURN,take,THING).",
+    "epistemic": false,
+    "pragmatic": true
   },
   {
     "type_name": "put",
@@ -110,7 +116,9 @@
       ]
     },
     "success_feedback": "You put the {{ e }} {{ prep }} the {{ t }}.",
-    "asp": "{ action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),at_t(TURN,SOURCE,ROOM),movable(THING),container(SOURCE),in_t(TURN,THING,SOURCE),open_t(TURN,SOURCE),container(TARGET),open_t(TURN,TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),at_t(TURN,SOURCE,ROOM),movable(THING),container(SOURCE),in_t(TURN,THING,SOURCE),open_t(TURN,SOURCE),support(TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),support(TARGET),movable(THING),on_t(TURN,THING,SOURCE),support(SOURCE);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),movable(THING),in_t(TURN,THING,inventory),container(TARGET),open_t(TURN,TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),movable(THING),in_t(TURN,THING,inventory),support(TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nin_t(TURN+1,THING,TARGET) :- turn(TURN), action_t(TURN,put,THING,TARGET), container(TARGET).\non_t(TURN+1,THING,TARGET) :- turn(TURN), action_t(TURN,put,THING,TARGET), support(TARGET).\nin_t(TURN+1,THING,inventory) :- turn(TURN), in_t(TURN,THING,inventory), not action_t(TURN,put,THING,_)."
+    "asp": "{ action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),at_t(TURN,SOURCE,ROOM),movable(THING),container(SOURCE),in_t(TURN,THING,SOURCE),open_t(TURN,SOURCE),container(TARGET),open_t(TURN,TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),at_t(TURN,SOURCE,ROOM),movable(THING),container(SOURCE),in_t(TURN,THING,SOURCE),open_t(TURN,SOURCE),support(TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),support(TARGET),movable(THING),on_t(TURN,THING,SOURCE),support(SOURCE);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),movable(THING),in_t(TURN,THING,inventory),container(TARGET),open_t(TURN,TARGET);action_t(TURN,put,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),movable(THING),in_t(TURN,THING,inventory),support(TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nin_t(TURN+1,THING,TARGET) :- turn(TURN), action_t(TURN,put,THING,TARGET), container(TARGET).\non_t(TURN+1,THING,TARGET) :- turn(TURN), action_t(TURN,put,THING,TARGET), support(TARGET).\nin_t(TURN+1,THING,inventory) :- turn(TURN), in_t(TURN,THING,inventory), not action_t(TURN,put,THING,_).",
+    "epistemic": false,
+    "pragmatic": true
   },
   {
     "type_name": "go",
@@ -136,7 +144,9 @@
       ]
     },
     "success_feedback": "{{ room_desc }}",
-    "asp": "{ action_t(TURN,go,TARGET):exit(ROOM,TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nat_t(TURN+1,player1,TARGET) :- action_t(TURN,go,TARGET).\nat_t(TURN+1,player1,ROOM) :- turn(TURN), at_t(TURN,player1,ROOM), not action_t(TURN,go,_).\nat_t(TURN+1,THING,TARGET) :- action_t(TURN,go,TARGET), in_t(TURN,THING,inventory).\nat_t(TURN+1,THING,ROOM) :- turn(TURN), at_t(TURN,THING,ROOM), not in_t(TURN,THING,inventory), not turn_limit(TURN), THING != player1."
+    "asp": "{ action_t(TURN,go,TARGET):exit(ROOM,TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nat_t(TURN+1,player1,TARGET) :- action_t(TURN,go,TARGET).\nat_t(TURN+1,player1,ROOM) :- turn(TURN), at_t(TURN,player1,ROOM), not action_t(TURN,go,_).\nat_t(TURN+1,THING,TARGET) :- action_t(TURN,go,TARGET), in_t(TURN,THING,inventory).\nat_t(TURN+1,THING,ROOM) :- turn(TURN), at_t(TURN,THING,ROOM), not in_t(TURN,THING,inventory), not turn_limit(TURN), THING != player1.",
+    "epistemic": true,
+    "pragmatic": true
   },
   {
     "type_name": "done",
@@ -156,6 +166,35 @@
       ]
     },
     "success_feedback": "You consider yourself done.",
-    "asp": ""
+    "asp": "",
+    "epistemic": false,
+    "pragmatic": true
+  },
+  {
+    "type_name": "examine",
+    "lark": "examine: EXAMINE thing\nEXAMINE.1: (\"examine\" | \"check\" | \"inspect\") WS",
+    "pddl": "(:action EXAMINE\n    :parameters (?p - player ?r - room ?e - entity)\n    :precondition (and\n        (at ?p ?r)\n        (or\n            (at ?e ?r)\n            (type ?e inventory)\n            )\n        (accessible ?e)\n            )\n    :effect (and\n    )\n)",
+    "pddl_parameter_mapping": {
+      "?p": ["player"],
+      "?r": ["current_player_room"],
+      "?e": ["arg1"]
+    },
+    "failure_feedback": {
+      "parameters": [
+        "{{ p }} is not a player. (This should not occur.)",
+        "{{ r }} is not a room. (This should not occur.)",
+        "{{ e }} is not an entity. (This should not occur.)"
+      ],
+      "precondition": [
+        "You are not where you are! (This should not occur.)",
+        "You can't see a {{ e }} here.",
+        "Your inventory is not an entity. (This should not occur.)",
+        "You can't see a {{ e }} here."
+      ]
+    },
+    "success_feedback": "{{ arg1_desc }}",
+    "asp": "",
+    "epistemic": true,
+    "pragmatic": false
   }
 ]

@@ -739,6 +739,9 @@ class AdventureIFInterpreter(GameResourceLocator):
                 facts_to_add.add(('accessible', fact[1]))
             if fact[0] == 'on' and ('support', fact[2]) in self.world_state:
                 facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'type' and ('needs_support', fact[1]) not in self.world_state and fact[2] not in (
+            "floor", "player"):
+                facts_to_add.add(('accessible', fact[1]))
 
         self.world_state = self.world_state.union(facts_to_add)
         # add initial world state to world state history:
@@ -970,6 +973,147 @@ class AdventureIFInterpreter(GameResourceLocator):
             content_desc = f"In the {container_repr} there are {content_str}."
 
         return content_desc
+
+    def get_entity_desc(self, entity) -> str:
+        """Get a full description of an entity.
+        Used for the EXAMINE action.
+        """
+        # get inventory description if inventory is examined:
+        if entity == "inventory":
+            return self.get_inventory_desc()
+
+        # get entity ID:
+        # NOTE: This assumes only one instance of any entity type is in the adventure!
+        entity_id = str()
+        for fact in self.world_state:
+            if fact[0] == 'type' and fact[2] == entity:
+                entity_id = fact[1]
+                break
+        print("entity ID found:", entity_id)
+        entity_desc_list = list()
+        # get all entity states to describe:
+        for fact in self.world_state:
+            if fact[1] == entity_id:
+                print("entity state fact:", fact)
+                # describe 'openable' entity states:
+                if fact[0] == "openable":
+                    openable_entity: str = fact[1]
+                    while openable_entity.endswith(("0","1","2","3","4","5","6","7","8","9")):
+                        openable_entity = openable_entity[:-1]
+                    print("openable_entity:", openable_entity)
+                    for fact2 in self.world_state:
+                        if fact2[1] == entity_id and fact2[0] in ("open", "closed"):
+                            openable_state = fact2[0]
+                            print("openable_state:", openable_state)
+                            break
+                    openable_desc = f"The {openable_entity} is openable and currently {openable_state}."
+                    entity_desc_list.append(openable_desc)
+                # describe 'takeable' entities:
+                if fact[0] == "takeable":
+                    takeable_entity: str = fact[1]
+                    while takeable_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        takeable_entity = takeable_entity[:-1]
+                    print("takeable_entity:", takeable_entity)
+                    takeable_desc = f"The {takeable_entity} is takeable."
+                    entity_desc_list.append(takeable_desc)
+                # describe the container or support state of 'needs_support' entities:
+                if fact[0] == "needs_support":
+                    needs_support_entity: str = fact[1]
+                    while needs_support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        needs_support_entity = needs_support_entity[:-1]
+                    print("needs_support_entity:", needs_support_entity)
+
+                    for fact2 in self.world_state:
+                        if fact2[1] == entity_id and fact2[0] in ("on", "in"):
+                            support_state = fact2[0]
+                            print("support_state:", support_state)
+                            supporter_entity = fact2[2]
+                            print("supporter_entity:", supporter_entity)
+                            break
+
+                    if supporter_entity == "inventory":
+                        supporter_entity = "your inventory"
+                    else:
+                        while supporter_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                            supporter_entity = supporter_entity[:-1]
+                        supporter_entity = f"the {supporter_entity}"
+
+                    needs_support_desc = f"The {needs_support_entity} is {support_state} {supporter_entity}."
+                    entity_desc_list.append(needs_support_desc)
+
+
+                if fact[0] == "container":
+                    container_entity: str = fact[1]
+                    while container_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        container_entity = container_entity[:-1]
+                    print("container_entity:", container_entity)
+
+                    contained_entities = list()
+
+                    for fact2 in self.world_state:
+                        if len(fact2) == 3:
+                            if fact2[2] == entity_id and fact2[0] == "in":
+                                # print(fact2)
+                                contained_entity = fact2[1]
+                                print("contained_entity:", contained_entity)
+                                # check if contained entity is accessible:
+                                if ('accessible', contained_entity) not in self.world_state:
+                                    continue
+                                print("contained_entity is accessible")
+
+                                while contained_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                                    contained_entity = contained_entity[:-1]
+                                print("contained_entity:", contained_entity)
+                                contained_entities.append(f"a {contained_entity}")
+
+                    if ('closed', fact[1]) in self.world_state:
+                        container_content_desc = f"You can't see the {container_entity}'s contents because it is closed."
+                    else:
+                        if len(contained_entities) == 0:
+                            container_content_desc = f"The {container_entity} is empty."
+                        elif len(contained_entities) == 1:
+                            container_content_desc = f"There is {contained_entities[0]} in the {container_entity}."
+                        elif len(contained_entities) == 2:
+                            container_content_desc = f"There are {contained_entities[0]} and {contained_entities[1]} in the {container_entity}."
+                        elif len(contained_entities) >= 3:
+                            container_content_desc = f"There are {', '.join(contained_entities[:-1])} and {contained_entities[-1]} in the {container_entity}."
+
+                    entity_desc_list.append(container_content_desc)
+
+                if fact[0] == "support":
+                    support_entity: str = fact[1]
+                    while support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        support_entity = support_entity[:-1]
+                    print("support_entity:", support_entity)
+
+                    supported_entities = list()
+
+                    for fact2 in self.world_state:
+                        if len(fact2) == 3:
+                            if fact2[2] == entity_id and fact2[0] == "on":
+                                # print(fact2)
+                                supported_entity = fact2[1]
+                                print("supported_entity:", supported_entity)
+
+                                while supported_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                                    supported_entity = supported_entity[:-1]
+                                print("supported_entity:", supported_entity)
+                                supported_entities.append(f"a {supported_entity}")
+
+                    if len(supported_entities) == 0:
+                        support_content_desc = f"There is nothing on the {support_entity}."
+                    elif len(supported_entities) == 1:
+                        support_content_desc = f"There is {supported_entities[0]} on the {support_entity}."
+                    elif len(supported_entities) == 2:
+                        support_content_desc = f"There are {supported_entities[0]} and {supported_entities[1]} on the {support_entity}."
+                    elif len(supported_entities) >= 3:
+                        support_content_desc = f"There are {', '.join(supported_entities[:-1])} and {supported_entities[-1]} on the {support_entity}."
+
+                    entity_desc_list.append(support_content_desc)
+
+                # TODO?: room description?
+
+        return " ".join(entity_desc_list)
 
     def parse_action_input(self, action_input: str) -> [bool, Union[dict, str], Union[dict, Set]]:
         """
@@ -1835,6 +1979,11 @@ class AdventureIFInterpreter(GameResourceLocator):
                     opened_container_id = added_fact[1]
                     break
             jinja_args["container_content"] = self.get_container_content_desc(opened_container_id)
+        if "arg1_desc" in success_feedback_template:
+            # get description of arg1 entity:
+            entity_desc = self.get_entity_desc(action_dict['arg1'])
+            # print()
+            jinja_args["arg1_desc"] = entity_desc
 
         feedback_str = feedback_jinja.render(jinja_args)
         # feedback_str = feedback_str.capitalize()

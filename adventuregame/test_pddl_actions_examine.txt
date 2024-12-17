@@ -1,0 +1,13 @@
+(:action EXAMINE
+    :parameters (?p - player ?r - room ?e - entity)
+    :precondition (and
+        (at ?p ?r)
+        (or
+            (at ?e ?r)
+            (type ?e inventory)
+            )
+        (accessible ?e)
+            )
+    :effect (and
+    )
+)

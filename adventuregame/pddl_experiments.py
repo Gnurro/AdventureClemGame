@@ -11,7 +11,7 @@ from adv_util import fact_str_to_tuple, fact_tuple_to_str
 
 # PDDL ACTIONS
 
-with open("pddl_actions.lark") as grammar_file:
+with open("resources/pddl_actions.lark") as grammar_file:
     action_grammar = grammar_file.read()
 
 # print(action_grammar)
@@ -565,9 +565,12 @@ class TestIF:
                         action_attribute]
 
         for action_type in self.action_types:
+            # print("action_type:", action_type)
             cur_action_type = self.action_types[action_type]
 
             if 'pddl' in cur_action_type:
+                # print("cur_action_type:", cur_action_type)
+                # print("cur_action_type['name']:", cur_action_type['name'])
                 # print(cur_action_type['pddl'])
                 parsed_action_pddl = action_parser.parse(cur_action_type['pddl'])
                 processed_action_pddl = action_def_transformer.transform(parsed_action_pddl)
@@ -727,6 +730,8 @@ class TestIF:
                 # print(f"{fact[1]} in inventory!")
                 facts_to_add.add(('accessible', fact[1]))
             if fact[0] == 'on' and ('support', fact[2]) in self.world_state:
+                facts_to_add.add(('accessible', fact[1]))
+            if fact[0] == 'type' and ('needs_support', fact[1]) not in self.world_state and fact[2] not in ("floor", "player"):
                 facts_to_add.add(('accessible', fact[1]))
 
         self.world_state = self.world_state.union(facts_to_add)
@@ -956,6 +961,150 @@ class TestIF:
         inv_desc = f"In your inventory you have {inv_str}."
 
         return inv_desc
+
+    def get_entity_desc(self, entity) -> str:
+        """Get a full description of an entity.
+        Used for the EXAMINE action.
+        """
+        # get inventory description if inventory is examined:
+        if entity == "inventory":
+            return self.get_inventory_desc()
+
+        # get entity ID:
+        # NOTE: This assumes only one instance of any entity type is in the adventure!
+        entity_id = str()
+        for fact in self.world_state:
+            if fact[0] == 'type' and fact[2] == entity:
+                entity_id = fact[1]
+                break
+        print("entity ID found:", entity_id)
+        entity_desc_list = list()
+        # get all entity states to describe:
+        for fact in self.world_state:
+            if fact[1] == entity_id:
+                print("entity state fact:", fact)
+                # describe 'openable' entity states:
+                if fact[0] == "openable":
+                    openable_entity: str = fact[1]
+                    while openable_entity.endswith(("0","1","2","3","4","5","6","7","8","9")):
+                        openable_entity = openable_entity[:-1]
+                    print("openable_entity:", openable_entity)
+                    for fact2 in self.world_state:
+                        if fact2[1] == entity_id and fact2[0] in ("open", "closed"):
+                            openable_state = fact2[0]
+                            print("openable_state:", openable_state)
+                            break
+                    openable_desc = f"The {openable_entity} is openable and currently {openable_state}."
+                    entity_desc_list.append(openable_desc)
+                # describe 'takeable' entities:
+                if fact[0] == "takeable":
+                    takeable_entity: str = fact[1]
+                    while takeable_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        takeable_entity = takeable_entity[:-1]
+                    print("takeable_entity:", takeable_entity)
+                    takeable_desc = f"The {takeable_entity} is takeable."
+                    entity_desc_list.append(takeable_desc)
+                # describe the container or support state of 'needs_support' entities:
+                if fact[0] == "needs_support":
+                    needs_support_entity: str = fact[1]
+                    while needs_support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        needs_support_entity = needs_support_entity[:-1]
+                    print("needs_support_entity:", needs_support_entity)
+
+                    for fact2 in self.world_state:
+                        if fact2[1] == entity_id and fact2[0] in ("on", "in"):
+                            support_state = fact2[0]
+                            print("support_state:", support_state)
+                            supporter_entity = fact2[2]
+                            print("supporter_entity:", supporter_entity)
+                            break
+
+                    if supporter_entity == "inventory":
+                        supporter_entity = "your inventory"
+                    else:
+                        while supporter_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                            supporter_entity = supporter_entity[:-1]
+                        supporter_entity = f"the {supporter_entity}"
+
+                    needs_support_desc = f"The {needs_support_entity} is {support_state} {supporter_entity}."
+                    entity_desc_list.append(needs_support_desc)
+
+
+                if fact[0] == "container":
+                    container_entity: str = fact[1]
+                    while container_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        container_entity = container_entity[:-1]
+                    print("container_entity:", container_entity)
+
+                    contained_entities = list()
+
+                    for fact2 in self.world_state:
+                        if len(fact2) == 3:
+                            if fact2[2] == entity_id and fact2[0] == "in":
+                                # print(fact2)
+                                contained_entity = fact2[1]
+                                print("contained_entity:", contained_entity)
+                                # check if contained entity is accessible:
+                                if ('accessible', contained_entity) not in self.world_state:
+                                    continue
+                                print("contained_entity is accessible")
+
+                                while contained_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                                    contained_entity = contained_entity[:-1]
+                                print("contained_entity:", contained_entity)
+                                contained_entities.append(f"a {contained_entity}")
+
+                    if ('closed', fact[1]) in self.world_state:
+                        container_content_desc = f"You can't see the {container_entity}'s contents because it is closed."
+                    else:
+                        if len(contained_entities) == 0:
+                            container_content_desc = f"The {container_entity} is empty."
+                        elif len(contained_entities) == 1:
+                            container_content_desc = f"There is {contained_entities[0]} in the {container_entity}."
+                        elif len(contained_entities) == 2:
+                            container_content_desc = f"There are {contained_entities[0]} and {contained_entities[1]} in the {container_entity}."
+                        elif len(contained_entities) >= 3:
+                            container_content_desc = f"There are {', '.join(contained_entities[:-1])} and {contained_entities[-1]} in the {container_entity}."
+
+                    entity_desc_list.append(container_content_desc)
+
+                if fact[0] == "support":
+                    support_entity: str = fact[1]
+                    while support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                        support_entity = support_entity[:-1]
+                    print("support_entity:", support_entity)
+
+                    supported_entities = list()
+
+                    for fact2 in self.world_state:
+                        if len(fact2) == 3:
+                            if fact2[2] == entity_id and fact2[0] == "on":
+                                # print(fact2)
+                                supported_entity = fact2[1]
+                                print("supported_entity:", supported_entity)
+
+                                while supported_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                                    supported_entity = supported_entity[:-1]
+                                print("supported_entity:", supported_entity)
+                                supported_entities.append(f"a {supported_entity}")
+
+                    if len(supported_entities) == 0:
+                        support_content_desc = f"There is nothing on the {support_entity}."
+                    elif len(supported_entities) == 1:
+                        support_content_desc = f"There is {supported_entities[0]} on the {support_entity}."
+                    elif len(supported_entities) == 2:
+                        support_content_desc = f"There are {supported_entities[0]} and {supported_entities[1]} on the {support_entity}."
+                    elif len(supported_entities) >= 3:
+                        support_content_desc = f"There are {', '.join(supported_entities[:-1])} and {supported_entities[-1]} on the {support_entity}."
+
+                    entity_desc_list.append(support_content_desc)
+
+                # TODO?: room description?
+
+        return " ".join(entity_desc_list)
+
+
+
 
     def check_fact(self, fact_tuple) -> bool:
         """Check if a fact tuple is in the world state."""
@@ -1590,124 +1739,6 @@ class TestIF:
         # print("Main action checked_conditions:",checked_conditions)
         # print("Checked precon tuples:", self.precon_tuples)
 
-        """
-        preconditions: list = cur_action_def['interaction']['precondition'][0]['and']
-        # print("preconditions:", preconditions)
-        precon_idx = 0
-        for precondition in preconditions:
-            # print("precondition:", precondition)
-
-            # 'polarity' of the precondition:
-            # if True, the precondition is fulfilled if its fact is in the world state
-            # if False, the precondition is NOT fulfilled if its fact is in the world state
-            precon_polarity = True
-            if 'not' in precondition:
-                # print("not clause in precondition!")
-                precon_polarity = False
-                precondition = precondition['not']
-
-            cur_predicate = precondition['predicate']
-            if not precondition['arg3']:
-                # print("No arg3 in precondition!")
-                if not precondition['arg2']:
-                    # print("No arg2 in precondition!")
-                    arg1_value = variable_map[precondition['arg1']['variable']]
-                    precon_tuple = (cur_predicate, arg1_value)
-                else:
-                    arg1_value = variable_map[precondition['arg1']['variable']]
-                    arg2_value = variable_map[precondition['arg2']['variable']]
-                    precon_tuple = (cur_predicate, arg1_value, arg2_value)
-            else:
-                arg1_value = variable_map[precondition['arg1']['variable']]
-                arg2_value = variable_map[precondition['arg2']['variable']]
-                arg3_value = variable_map[precondition['arg3']['variable']]
-                precon_tuple = (cur_predicate, arg1_value, arg2_value, arg3_value)
-
-            # print("precon_tuple pre-instance resolution:", precon_tuple)
-
-            # assume that action arguments that don't end in numbers or "floor" are type words:
-            for arg_idx, action_arg in enumerate(precon_tuple[1:]):  # first tuple item is always a predicate
-                # print("action_arg:", action_arg)
-                type_matched_instances = list()
-                if not action_arg.endswith(("0","1","2","3","4","5","6","7","8","9","floor")):  # TODO: floor hardcode removal
-                    # print(f"{action_arg} is not a type instance ID!")
-                    # go over world state facts to find room or type predicate:
-                    for fact in self.world_state:
-                        # check for predicate fact matching action argument:
-                        if fact[0] == "room" or fact[0] == "type":
-                            if fact[2] == action_arg:
-                                # print(f"{fact[0]} predicate fact found:", fact)
-                                type_matched_instances.append(fact[1])
-                        # TODO: fail if there is no type-fitting instance in world state
-
-                    # print(type_matched_instances)
-
-                    # NB: assume all room and entity types have only a single instance in the adventure!
-
-                    # replace corresponding variable_map value with instance ID:
-                    for variable in variable_map:
-                        if variable_map[variable] == action_arg:
-                            variable_map[variable] = type_matched_instances[0]
-                            # print("instance-filled variable_map:", variable_map)
-
-                    # create fact tuple to check for:
-                    match len(precon_tuple):
-                        case 2:
-                            precon_tuple = (precon_tuple[0], type_matched_instances[0])
-                        case 3:
-                            if arg_idx == 0:
-                                precon_tuple = (precon_tuple[0], type_matched_instances[0], precon_tuple[2])
-                            elif arg_idx == 1:
-                                precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0])
-                        case 4:
-                            if arg_idx == 0:
-                                precon_tuple = (precon_tuple[0], type_matched_instances[0], precon_tuple[2], precon_tuple[3])
-                            elif arg_idx == 1:
-                                precon_tuple = (precon_tuple[0], precon_tuple[1], type_matched_instances[0], precon_tuple[3])
-                            elif arg_idx == 2:
-                                precon_tuple = (precon_tuple[0], precon_tuple[1], precon_tuple[2], type_matched_instances[0])
-
-            print("precon_tuple post-instance resolution:", precon_tuple)
-
-            # check for predicate fact to match the precondition:
-            precon_is_fact = False
-
-            if precon_tuple in self.world_state:
-                # print(f"Precondition {precon_tuple} is in the world state!")
-                precon_is_fact = True
-            else:
-                # print(f"Precondition {precon_tuple} is NOT in the world state!")
-                pass
-
-            precon_fulfilled = False
-            # check that precondition 'polarity' matches:
-            if precon_is_fact == precon_polarity:
-                precon_fulfilled = True
-
-            if precon_fulfilled:
-                print("Precondition fulfilled!")
-                pass
-            else:
-                print("Precondition not fulfilled!")
-                # get fail feedback template using precondition index:
-                feedback_template = cur_action_def['failure_feedback']['precondition'][precon_idx]
-                feedback_jinja = jinja2.Template(feedback_template)
-                # fill feedback template:
-                clean_feedback_variable_map = deepcopy(variable_map)
-                for key in clean_feedback_variable_map:
-                    while clean_feedback_variable_map[key].endswith(("0","1","2","3","4","5","6","7","8","9")):
-                        clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
-                jinja_args = clean_feedback_variable_map
-                feedback_str = feedback_jinja.render(jinja_args)
-                feedback_str = feedback_str.capitalize()
-                print("fail:", feedback_str)
-
-                return False, feedback_str, {}
-
-            # print("\n")
-            precon_idx += 1
-        """
-
         # if checked_conditions:
         if self.precon_trace[-1]['checks_out']:
             print("Preconditions fulfilled!")
@@ -1838,6 +1869,12 @@ class TestIF:
                     opened_container_id = added_fact[1]
                     break
             jinja_args["container_content"] = self.get_container_content_desc(opened_container_id)
+        if "arg1_desc" in success_feedback_template:
+            # get description of arg1 entity:
+            entity_desc = self.get_entity_desc(action_dict['arg1'])
+            # print()
+            jinja_args["arg1_desc"] = entity_desc
+
 
         feedback_str = feedback_jinja.render(jinja_args)
         # feedback_str = feedback_str.capitalize()
@@ -1855,9 +1892,13 @@ test_instance = {"initial_state":{
                     "in(sandwich1,inventory)", "at(sandwich1,kitchen1)",
                     "type(apple1,apple)", "takeable(apple1)", "needs_support(apple1)",
                     "in(apple1,refrigerator1)", "at(apple1,kitchen1)",
+                    "type(orange1,orange)", "takeable(orange1)", "needs_support(orange1)",
+                    "in(orange1,refrigerator1)", "at(orange1,kitchen1)",
+                    "type(banana1,banana)", "takeable(banana1)", "needs_support(banana1)",
+                    "in(banana1,refrigerator1)", "at(banana1,kitchen1)",
                     "type(counter1,counter)", "at(counter1,kitchen1)", "support(counter1)",
                     "type(refrigerator1,refrigerator)", "at(refrigerator1,kitchen1)",
-                    "container(refrigerator1)", "open(refrigerator1)",
+                    "container(refrigerator1)", "closed(refrigerator1)",
                     "type(plate1,plate)", "at(plate1,kitchen1)", "on(plate1,counter1)"
                     },
                 "action_definitions": ["basic_actions_v2.json"],
@@ -1867,6 +1908,12 @@ test_instance = {"initial_state":{
 
 
 test_interpreter = TestIF(test_instance)
+
+"""
+for fact in test_interpreter.world_state:
+    if fact[0] == "accessible":
+        print("accessible fact:", fact)
+"""
 
 """
 for fact in test_interpreter.world_state:
@@ -1899,18 +1946,25 @@ print(f"Inventory is closed: {('closed', 'inventory') in test_interpreter.world_
 
 # action_input = {'type': "open", 'arg1': "refrigerator"}
 
-action_input = {'type': "close", 'arg1': "refrigerator"}
+# action_input = {'type': "close", 'arg1': "refrigerator"}
 
 # action_input = {'type': "take", 'arg1': "apple"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "refrigerator", 'prep': "from"}
 # action_input = {'type': "take", 'arg1': "apple", 'arg2': "counter", 'prep': "from"}
 
+# action_input = {'type': "examine", 'arg1': "refrigerator"}
+# action_input = {'type': "examine", 'arg1': "counter"}
+# action_input = {'type': "examine", 'arg1': "inventory"}
+# action_input = {'type': "examine", 'arg1': "sandwich"}
+action_input = {'type': "examine", 'arg1': "apple"}
+
+# action_input = {'type': "done"}
 
 action_resolve_result = test_interpreter.resolve_action(action_input)
 print("action_resolve_result:", action_resolve_result)
 
 # print("Post-action world state:", test_interpreter.world_state)
-
+"""
 # ACTION 2
 
 action_input = {'type': "take", 'arg1': "apple"}
@@ -1918,4 +1972,4 @@ action_input = {'type': "take", 'arg1': "apple"}
 # action_input = {'type': "go", 'arg1': "kitchen"}
 action_resolve_result = test_interpreter.resolve_action(action_input)
 print("action_resolve_result:", action_resolve_result)
-
+"""
