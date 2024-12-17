@@ -137,5 +137,25 @@
     },
     "success_feedback": "{{ room_desc }}",
     "asp": "{ action_t(TURN,go,TARGET):exit(ROOM,TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).\nat_t(TURN+1,player1,TARGET) :- action_t(TURN,go,TARGET).\nat_t(TURN+1,player1,ROOM) :- turn(TURN), at_t(TURN,player1,ROOM), not action_t(TURN,go,_).\nat_t(TURN+1,THING,TARGET) :- action_t(TURN,go,TARGET), in_t(TURN,THING,inventory).\nat_t(TURN+1,THING,ROOM) :- turn(TURN), at_t(TURN,THING,ROOM), not in_t(TURN,THING,inventory), not turn_limit(TURN), THING != player1."
+  },
+  {
+    "type_name": "done",
+    "lark": "done: DONE\nDONE.1: (\"done\" | \"quit\" | \"finish\") WS",
+    "pddl": "(:action DONE\n    :parameters (?p - player ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        )\n    :effect (and\n    )\n)",
+    "pddl_parameter_mapping": {
+      "?p": ["player"],
+      "?r": ["current_player_room"]
+    },
+    "failure_feedback": {
+      "parameters": [
+        "{{ p }} is not a player. (This should not occur.)",
+        "{{ r }} is not a room. (This should not occur.)"
+      ],
+      "precondition": [
+        "You are not where you are! (This should not occur.)"
+      ]
+    },
+    "success_feedback": "You consider yourself done.",
+    "asp": ""
   }
 ]

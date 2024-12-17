@@ -38,7 +38,9 @@ class AdventureGameInstanceGenerator(GameInstanceGenerator):
             basic_experiment = self.add_experiment(f"{adventure_type}_basic_{difficulty}")
 
             # Load the prepared initial prompt
-            basic_prompt = self.load_template("resources/initial_prompts/basic_prompt")
+            # basic_prompt = self.load_template("resources/initial_prompts/basic_prompt")
+            basic_prompt = self.load_template("resources/initial_prompts/basic_prompt_done")
+            # TODO?: externalize which prompt templates to use into adventure_type/experiment_type definition(s)?
 
             for adventure_id in tqdm(range(len(adventures[difficulty]))):
                 goal_str = adventures[difficulty][adventure_id]['goal']
@@ -72,7 +74,8 @@ class AdventureGameInstanceGenerator(GameInstanceGenerator):
             planning_experiment = self.add_experiment(f"{adventure_type}_planning_{difficulty}")
 
             # Load the prepared initial prompt
-            planning_prompt = self.load_template("resources/initial_prompts/plan_prompt")
+            # planning_prompt = self.load_template("resources/initial_prompts/plan_prompt")
+            planning_prompt = self.load_template("resources/initial_prompts/plan_prompt_done")
 
             for adventure_id in tqdm(range(len(adventures[difficulty]))):
                 goal_str = adventures[difficulty][adventure_id]['goal']

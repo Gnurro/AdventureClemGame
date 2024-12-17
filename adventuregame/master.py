@@ -29,6 +29,7 @@ class AdventureGameMaster(DialogueGameMaster):
         self.success = True
         self.invalid_format: str = ""  # to track responses with invalid format
         self.finished: bool = False  # game finished successfully
+        self.model_done = False  # model used DONE action to end game
 
     def _on_setup(self, **game_instance):
         self.game_instance = game_instance  # fetch game parameters here
@@ -134,6 +135,10 @@ class AdventureGameMaster(DialogueGameMaster):
         if len(self.turns) >= self.game_instance['max_turns']:
             self.log_to_self("turn_limit_reached", self.game_instance['max_turns'])
             return False
+        # stop game when model used DONE action:
+        if self.model_done:
+            self.log_to_self("model_done", len(self.turns))
+            return False
         # otherwise keep playing:
         return True
 
@@ -161,6 +166,12 @@ class AdventureGameMaster(DialogueGameMaster):
             if fail:
                 # record failure dict for scoring:
                 self.log_to_self("action_fail", fail)  # can be JSON'd; for easier eval
+
+            # catch DONE action to end game after this turn:
+            if if_response == "You consider yourself done.":  # using success feedback string to identify for now
+                logger.info(f"model_done: {if_response}")
+                # self.log_to_self("model_done", if_response)
+                self.model_done = True
 
             # handle goals:
             self.goals_achieved = goals_achieved
