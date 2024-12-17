@@ -2,7 +2,7 @@
   {
     "type_name": "open",
     "lark": "open: OPEN thing\nOPEN.1: \"open\" WS",
-    "pddl": "(:action OPEN\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (closed ?e)\n        )\n    :effect (and\n        (open ?e)\n        (not (closed ?e))\n    )\n)",
+    "pddl": "(:action OPEN\n    :parameters (?e - openable ?r - room ?p - player)\n    :precondition (and\n        (at ?p ?r)\n        (at ?e ?r)\n        (closed ?e)\n        )\n    :effect (and\n        (open ?e)\n        (not (closed ?e))\n        (forall (?c - takeable)\n            (when\n                (in ?c ?e)\n                (and\n                    (accessible ?c)\n                )\n            )\n        )\n    )\n)",
     "pddl_parameter_mapping": {
       "?e": ["arg1"],
       "?r": ["current_player_room"],
