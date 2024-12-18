@@ -150,7 +150,7 @@
   },
   {
     "type_name": "done",
-    "lark": "done: DONE\nDONE.1: (\"done\" | \"quit\" | \"finish\") WS",
+    "lark": "done: DONE\nDONE.1: (\"done\" | \"quit\" | \"finish\") WS*",
     "pddl": "(:action DONE\n    :parameters (?p - player ?r - room)\n    :precondition (and\n        (at ?p ?r)\n        )\n    :effect (and\n    )\n)",
     "pddl_parameter_mapping": {
       "?p": ["player"],

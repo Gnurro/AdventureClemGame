@@ -439,8 +439,8 @@ class AdventureIFInterpreter(GameResourceLocator):
     IF interpreter for adventuregame.
     Holds game world state and handles all interaction and feedback.
     """
-    def __init__(self, game_instance: dict, name: str = GAME_NAME, verbose: bool = False):
-        super().__init__(name)
+    def __init__(self, game_path, game_instance: dict, name: str = GAME_NAME, verbose: bool = False):
+        super().__init__(name, game_path)
         # game instance is the instance data as passed by the GameMaster class
         self.game_instance: dict = game_instance
         # surface strings (repr_str here) to spaceless internal identifiers:
@@ -522,7 +522,7 @@ class AdventureIFInterpreter(GameResourceLocator):
         action_def_grammar = self.load_file(f"resources{os.sep}pddl_actions.lark")
         self.action_def_parser = Lark(action_def_grammar, start="action")
         domain_def_grammar = self.load_file(f"resources{os.sep}pddl_domain.lark")
-        self.domain_def_parser = Lark(domain_def_grammar, start="action")
+        self.domain_def_parser = Lark(domain_def_grammar, start="define")
 
     def initialize_action_types(self):
         """
@@ -570,7 +570,7 @@ class AdventureIFInterpreter(GameResourceLocator):
 
         for domain_definition in domain_definitions:
             # print("domain_definition:", domain_definition)
-            parsed_domain_pddl = self.domain_parser.parse(domain_definition)
+            parsed_domain_pddl = self.domain_def_parser.parse(domain_definition)
             processed_domain_pddl = self.domain_def_transformer.transform(parsed_domain_pddl)
             # print("processed_domain_pddl:", processed_domain_pddl)
 
@@ -675,6 +675,7 @@ class AdventureIFInterpreter(GameResourceLocator):
         # add trait facts for objects:
         for fact in self.world_state:
             if fact[0] == 'type':
+                # logger.info({"type fact for trait assignment": fact})
                 # add trait facts by entity type:
                 if 'traits' in self.entity_types[fact[2]]:
                     type_traits: list = self.entity_types[fact[2]]['traits']
@@ -991,22 +992,22 @@ class AdventureIFInterpreter(GameResourceLocator):
             if fact[0] == 'type' and fact[2] == entity:
                 entity_id = fact[1]
                 break
-        print("entity ID found:", entity_id)
+        # print("entity ID found:", entity_id)
         entity_desc_list = list()
         # get all entity states to describe:
         for fact in self.world_state:
             if fact[1] == entity_id:
-                print("entity state fact:", fact)
+                # print("entity state fact:", fact)
                 # describe 'openable' entity states:
                 if fact[0] == "openable":
                     openable_entity: str = fact[1]
                     while openable_entity.endswith(("0","1","2","3","4","5","6","7","8","9")):
                         openable_entity = openable_entity[:-1]
-                    print("openable_entity:", openable_entity)
+                    # print("openable_entity:", openable_entity)
                     for fact2 in self.world_state:
                         if fact2[1] == entity_id and fact2[0] in ("open", "closed"):
                             openable_state = fact2[0]
-                            print("openable_state:", openable_state)
+                            # print("openable_state:", openable_state)
                             break
                     openable_desc = f"The {openable_entity} is openable and currently {openable_state}."
                     entity_desc_list.append(openable_desc)
@@ -1015,7 +1016,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                     takeable_entity: str = fact[1]
                     while takeable_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                         takeable_entity = takeable_entity[:-1]
-                    print("takeable_entity:", takeable_entity)
+                    # print("takeable_entity:", takeable_entity)
                     takeable_desc = f"The {takeable_entity} is takeable."
                     entity_desc_list.append(takeable_desc)
                 # describe the container or support state of 'needs_support' entities:
@@ -1023,14 +1024,14 @@ class AdventureIFInterpreter(GameResourceLocator):
                     needs_support_entity: str = fact[1]
                     while needs_support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                         needs_support_entity = needs_support_entity[:-1]
-                    print("needs_support_entity:", needs_support_entity)
+                    # print("needs_support_entity:", needs_support_entity)
 
                     for fact2 in self.world_state:
                         if fact2[1] == entity_id and fact2[0] in ("on", "in"):
                             support_state = fact2[0]
-                            print("support_state:", support_state)
+                            # print("support_state:", support_state)
                             supporter_entity = fact2[2]
-                            print("supporter_entity:", supporter_entity)
+                            # print("supporter_entity:", supporter_entity)
                             break
 
                     if supporter_entity == "inventory":
@@ -1048,7 +1049,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                     container_entity: str = fact[1]
                     while container_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                         container_entity = container_entity[:-1]
-                    print("container_entity:", container_entity)
+                    # print("container_entity:", container_entity)
 
                     contained_entities = list()
 
@@ -1057,15 +1058,15 @@ class AdventureIFInterpreter(GameResourceLocator):
                             if fact2[2] == entity_id and fact2[0] == "in":
                                 # print(fact2)
                                 contained_entity = fact2[1]
-                                print("contained_entity:", contained_entity)
+                                # print("contained_entity:", contained_entity)
                                 # check if contained entity is accessible:
                                 if ('accessible', contained_entity) not in self.world_state:
                                     continue
-                                print("contained_entity is accessible")
+                                # print("contained_entity is accessible")
 
                                 while contained_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                                     contained_entity = contained_entity[:-1]
-                                print("contained_entity:", contained_entity)
+                                # print("contained_entity:", contained_entity)
                                 contained_entities.append(f"a {contained_entity}")
 
                     if ('closed', fact[1]) in self.world_state:
@@ -1086,7 +1087,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                     support_entity: str = fact[1]
                     while support_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                         support_entity = support_entity[:-1]
-                    print("support_entity:", support_entity)
+                    # print("support_entity:", support_entity)
 
                     supported_entities = list()
 
@@ -1095,11 +1096,11 @@ class AdventureIFInterpreter(GameResourceLocator):
                             if fact2[2] == entity_id and fact2[0] == "on":
                                 # print(fact2)
                                 supported_entity = fact2[1]
-                                print("supported_entity:", supported_entity)
+                                # print("supported_entity:", supported_entity)
 
                                 while supported_entity.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
                                     supported_entity = supported_entity[:-1]
-                                print("supported_entity:", supported_entity)
+                                # print("supported_entity:", supported_entity)
                                 supported_entities.append(f"a {supported_entity}")
 
                     if len(supported_entities) == 0:
@@ -1158,6 +1159,11 @@ class AdventureIFInterpreter(GameResourceLocator):
                 logger.info(f"Parsing undefined action without verb")
                 fail_dict: dict = {'phase': "parsing", 'fail_type': "undefined_action", 'arg': action_input}
                 return False, f"I don't know what you mean.", fail_dict
+
+        logger.info(f"current parsed action_dict: {action_dict}")
+
+        if action_dict['type'] == "done":
+            return True, action_dict, {}
 
         if action_dict['arg1'] in self.repr_str_to_type_dict:
             # convert arg1 from repr to internal type:
@@ -1238,6 +1244,8 @@ class AdventureIFInterpreter(GameResourceLocator):
         Resolves variables as well.
         Resolves type action/predicate arguments assuming single type instance.
         """
+        # logger.info(f"predicate_to_tuple input predicate: {predicate}")
+        # logger.info(f"predicate_to_tuple input variable_map: {variable_map}")
 
         predicate_type = predicate['predicate']
 
@@ -1271,12 +1279,16 @@ class AdventureIFInterpreter(GameResourceLocator):
         predicate_tuple = tuple(predicate_list)
         # print("when_condition_tuple:", when_condition_tuple)
 
+        # logger.info(f"predicate_to_tuple predicate_tuple intermediate: {predicate_tuple}")
+
         # assume that action arguments that don't end in numbers or "floor" are type words:
         for tuple_idx, tuple_arg in enumerate(predicate_tuple[1:]):  # first tuple item is always a predicate
             # print("tuple_arg:", tuple_arg)
             type_matched_instances = list()
             if tuple_arg:
-                if not tuple_arg.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                # logger.info(f"predicate_to_tuple tuple_arg intermediate: {tuple_arg}")
+                # if not tuple_arg.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                if not tuple_arg.endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "inventory")):
                     # print(f"{tuple_arg} is not a type instance ID!")
                     # go over world state facts to find room or type predicate:
                     for fact in self.world_state:
@@ -1287,7 +1299,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                                 type_matched_instances.append(fact[1])
                         # TODO?: fail if there is no type-fitting instance in world state?
 
-                    # print(type_matched_instances)
+                    # logger.info(f"type_matched_instances: {type_matched_instances}")
 
                     # NOTE: This assumes all room and entity types have only a single instance in the adventure!
 
@@ -1484,16 +1496,16 @@ class AdventureIFInterpreter(GameResourceLocator):
                 forall_items = all_entities_list
         elif 'type_list' in forall_type:
             # TODO?: iterate over multiple type list variables?
-            print("Type list forall_type:", forall_type)
+            # print("Type list forall_type:", forall_type)
             forall_type_list = forall_type['type_list']
-            print("forall_type_list:", forall_type_list)
+            # print("forall_type_list:", forall_type_list)
             for type_list_element in forall_type_list:
                 type_list_type = type_list_element['type_list_element']
                 for type_list_item in type_list_element['items']:
-                    print("type_list_item:", type_list_item)
+                    # print("type_list_item:", type_list_item)
                     if 'variable' in type_list_item:
                         type_list_item_variable = type_list_item['variable']
-                        print("type_list_item_variable:", type_list_item_variable)
+                        # print("type_list_item_variable:", type_list_item_variable)
                         # get all type-matched objects:
                         type_matched_objects = list()
                         for fact in self.world_state:
@@ -1503,7 +1515,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                         # assign all matched objects to forall variable map:
                         forall_variable_map[type_list_item_variable] = type_matched_objects
 
-        print("forall_variable_map:", forall_variable_map)
+        # print("forall_variable_map:", forall_variable_map)
 
         # NOTE: For now only covering forall with a single variable/type to iterate over, due to time constraints.
 
@@ -1733,9 +1745,18 @@ class AdventureIFInterpreter(GameResourceLocator):
 
                 # check type match:
                 # assume all world state instance IDs end in numbers:
+
+                # logger.info(variable_map)
+
                 if variable_map[var_id]:
                     if variable_map[var_id].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
-                        var_type = self.inst_to_type_dict[variable_map[var_id]]
+                        # logger.info(self.inst_to_type_dict)
+                        # logger.info(f"{variable_map[var_id]} in self.inst_to_type_dict: {variable_map[var_id] in self.inst_to_type_dict}")
+                        # logger.info(f"{variable_map[var_id]} in self.room_to_type_dict: {variable_map[var_id] in self.room_to_type_dict}")
+                        if variable_map[var_id] in self.inst_to_type_dict:
+                            var_type = self.inst_to_type_dict[variable_map[var_id]]
+                        elif variable_map[var_id] in self.room_to_type_dict:
+                            var_type = self.room_to_type_dict[variable_map[var_id]]
                     else:
                         # assume that other strings are essentially type strings:
                         var_type = variable_map[var_id]

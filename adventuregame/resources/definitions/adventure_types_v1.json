@@ -18,10 +18,9 @@
     "bench_turn_limit": 50
   },
   "home_deliver_three": {
-    "action_definitions": ["basic_actions_v2.json"],
+    "action_definitions": ["basic_actions.json"],
     "room_definitions": ["home_rooms.json"],
     "entity_definitions": ["home_entities.json"],
-    "domain_definitions": ["home_domain.json"],
     "initial_state_config": {
       "entity_adjectives": "none"
     },

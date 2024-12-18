@@ -10,7 +10,9 @@ from tqdm import tqdm
 import clemcore
 from clemcore.clemgame import GameInstanceGenerator
 
-logger = clemgame.get_logger(__name__)
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AdventureGameInstanceGenerator(GameInstanceGenerator):
@@ -67,6 +69,7 @@ class AdventureGameInstanceGenerator(GameInstanceGenerator):
                 game_instance["action_definitions"] = adventures[difficulty][adventure_id]['action_definitions']  # game parameters
                 game_instance["room_definitions"] = adventures[difficulty][adventure_id]['room_definitions']  # game parameters
                 game_instance["entity_definitions"] = adventures[difficulty][adventure_id]['entity_definitions']  # game parameters
+                game_instance["domain_definitions"] = adventures[difficulty][adventure_id]['domain_definitions']  # game parameters
 
             # PLANNING
 
@@ -103,8 +106,9 @@ class AdventureGameInstanceGenerator(GameInstanceGenerator):
                 game_instance["action_definitions"] = adventures[difficulty][adventure_id]['action_definitions']  # game parameters
                 game_instance["room_definitions"] = adventures[difficulty][adventure_id]['room_definitions']  # game parameters
                 game_instance["entity_definitions"] = adventures[difficulty][adventure_id]['entity_definitions']  # game parameters
+                game_instance["domain_definitions"] = adventures[difficulty][adventure_id]['domain_definitions']  # game parameters
 
 
 if __name__ == '__main__':
     # The resulting instances.json is automatically saved to the "in" directory of the game folder
-    AdventureGameInstanceGenerator().generate(raw_adventures_file="curated_home_deliver_three_adventures")
+    AdventureGameInstanceGenerator().generate(raw_adventures_file="curated_home_deliver_three_adventures_v2")

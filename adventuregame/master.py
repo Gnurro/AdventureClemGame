@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 from clemcore.backends import Model
 from clemcore.utils import file_utils
 import clemcore.clemgame.metrics as metrics
-from clemcore.clemgame import GameMaster, GameBenchmark, GameScorer, DialogueGameMaster, Player
+from clemcore.clemgame import GameSpec, GameMaster, GameBenchmark, GameScorer, DialogueGameMaster, Player
 
 import logging
 
@@ -36,7 +36,7 @@ class AdventureGameMaster(DialogueGameMaster):
         # check game variant; 'basic' or 'planning':
         self.if_variant = self.game_instance['variant']
         # initialize IF interpreter:
-        self.if_interpreter = AdventureIFInterpreter(self.game_instance)
+        self.if_interpreter = AdventureIFInterpreter(self.game_path, self.game_instance)
         # create clem player:
         self.player = Player(self.player_models[0])
         # Add the players: these will be logged to the records interactions.json
@@ -170,7 +170,7 @@ class AdventureGameMaster(DialogueGameMaster):
             # catch DONE action to end game after this turn:
             if 'done_action' in action_info:
                 logger.info(f"model_done: {action_info}")
-                # self.log_to_self("model_done", if_response)
+                self.log_to_self("model_done", if_input)
                 self.model_done = True
 
             if 'epist_pragma' in action_info:
