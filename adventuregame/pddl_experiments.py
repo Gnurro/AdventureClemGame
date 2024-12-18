@@ -1800,6 +1800,12 @@ class TestIF:
             feedback_str = feedback_str.capitalize()
             # print("fail:", feedback_str)
 
+            # get epistemic/pragmatic info for action:
+            action_epistemic_pragmatic = {'epistemic': self.action_types[action_dict['type']]['epistemic'],
+                                          'pragmatic': self.action_types[action_dict['type']]['pragmatic']}
+            print("action_epistemic_pragmatic:", action_epistemic_pragmatic)
+
+
             return False, feedback_str, {}
 
 

@@ -158,20 +158,23 @@ class AdventureGameMaster(DialogueGameMaster):
             prior_goal_count = len(self.goals_achieved)
 
             # send to IF interpreter to process action:
-            goals_achieved, if_response, fail = self.if_interpreter.process_action(if_input)
+            goals_achieved, if_response, action_info = self.if_interpreter.process_action(if_input)
             # IF interpreter returns: set of achieved goal states in string form,
             # textual feedback response, failure dict
             logger.info(f"IF response: {if_response}")
 
-            if fail:
+            if 'fail_type' in action_info:
                 # record failure dict for scoring:
-                self.log_to_self("action_fail", fail)  # can be JSON'd; for easier eval
+                self.log_to_self("action_fail", action_info)  # can be JSON'd; for easier eval
 
             # catch DONE action to end game after this turn:
-            if if_response == "You consider yourself done.":  # using success feedback string to identify for now
-                logger.info(f"model_done: {if_response}")
+            if 'done_action' in action_info:
+                logger.info(f"model_done: {action_info}")
                 # self.log_to_self("model_done", if_response)
                 self.model_done = True
+
+            if 'epist_pragma' in action_info:
+                self.log_to_self("epistemic_pragmatic", action_info['epist_pragma'])
 
             # handle goals:
             self.goals_achieved = goals_achieved
@@ -247,6 +250,11 @@ class AdventureGameScorer(GameScorer):
         Writes to score file in the episode directory.
         :param episode_interactions: Dict containing episode records for entire episode and turns.
         """
+
+        # TODO: handle new PDDL-based fail_dicts below
+        #  old types: going_to_current_room, no_exit_to, multiple_exits_to, entity_already_inventory, thing_arg1_room,
+        #  entity_not_accessible, multiple_entity_ambiguity, thing_arg2_room, pre_state_mismatch
+
         # get adventure/episode-level info:
         adventure_info: dict = episode_interactions['adventure_info']
         turn_scores = []

@@ -11,8 +11,9 @@ import os
 from copy import deepcopy
 from typing import List, Set, Union
 
-from clemgame.clemgame import GameResourceLocator
-from clemgame import get_logger
+from clemcore.clemgame import GameResourceLocator
+
+import logging
 
 from adv_util import fact_str_to_tuple, fact_tuple_to_str
 
@@ -20,7 +21,8 @@ PATH = "games/adventuregame/"
 RESOURCES_SUBPATH = "resources/"
 
 GAME_NAME = "adventuregame"
-logger = get_logger(__name__)
+
+logger = logging.getLogger(__name__)
 
 
 class IFTransformer(Transformer):
@@ -1165,6 +1167,8 @@ class AdventureIFInterpreter(GameResourceLocator):
             fail_dict: dict = {'phase': "parsing", 'fail_type': "undefined_repr_str", 'arg': action_dict['arg1']}
             return False, f"I don't know what '{action_dict['arg1']}' means.", fail_dict
 
+        # TODO?: Remove action-type specific hardcode below?; should be handled by PDDL-based resolution now
+
         if action_dict['arg1'] not in self.entity_types:
             logger.info(f"Action arg1 '{action_dict['arg1']}' is not an entity")
             # handle manipulating rooms, ie "> take from kitchen":
@@ -1573,70 +1577,6 @@ class AdventureIFInterpreter(GameResourceLocator):
         checked_conditions = self.check_conditions(when_conditions, variable_map, check_precon_idx=False, precon_trace=False)
         # print("checked_conditions:", checked_conditions)
 
-        """
-        when_conditions_type = "predicate"
-        if 'and' in when_conditions:
-            when_conditions_type = "and"
-            when_conditions = when_conditions['and']
-        elif 'or' in when_conditions:
-            when_conditions_type = "or"
-            when_conditions = when_conditions['or']
-
-        if when_conditions_type in ["and", "or"]:
-            # print("when_conditions after and/or:", when_conditions)
-            pass
-
-
-        if when_conditions_type == "and":
-            for when_condition in when_conditions:
-                print("and when_condition:", when_condition)
-                # TODO: handle and-clause when conditions
-                pass
-        elif when_conditions_type == "or":
-            for when_condition in when_conditions:
-                print("or when_condition:", when_condition)
-                # TODO: handle or-clause when conditions
-                pass
-        elif when_conditions_type == "predicate":
-            # print("single-predicate when_conditions:", when_conditions)
-            when_condition_predicate = when_conditions['predicate']
-
-            when_condition_arg1 = when_conditions['arg1']
-            if 'variable' in when_condition_arg1:
-                when_condition_arg1 = variable_map[when_condition_arg1['variable']]
-                # print("filled when condition variable:", when_condition_arg1)
-                # for now:
-                if type(when_condition_arg1) == list:
-                    when_condition_arg1 = when_condition_arg1[0]
-
-            when_condition_list = [when_condition_predicate, when_condition_arg1]
-
-            when_condition_arg2 = None
-            if when_conditions['arg2']:
-                when_condition_arg2 = when_conditions['arg2']
-                if 'variable' in when_condition_arg2:
-                    when_condition_arg2 = variable_map[when_condition_arg2['variable']]
-                    # print("filled when condition variable:", when_condition_arg2)
-                when_condition_list.append(when_condition_arg2)
-
-            when_condition_arg3 = None
-            if when_conditions['arg3']:
-                when_condition_arg3 = when_conditions['arg3']
-                if 'variable' in when_condition_arg3:
-                    when_condition_arg3 = variable_map[when_condition_arg3['variable']]
-                    # print("filled when condition variable:", when_condition_arg3)
-                when_condition_list.append(when_condition_arg3)
-
-            # print("when_condition_list:", when_condition_list)
-            when_condition_tuple = tuple(when_condition_list)
-            # print("when_condition_tuple:", when_condition_tuple)
-
-            # check if condition is world state fact:
-            if when_condition_tuple in self.world_state:
-                when_conditions_fulfilled = True
-        """
-
-
         # if when_conditions_fulfilled:
         if checked_conditions:
             # print("When conditions fulfilled!")
@@ -1834,7 +1774,8 @@ class AdventureIFInterpreter(GameResourceLocator):
                     feedback_str = feedback_jinja.render(jinja_args)
                     feedback_str = feedback_str.capitalize()
                     # print("parameter fail:", feedback_str)
-                    return False, feedback_str, {}
+                    fail_dict: dict = {'phase': "resolution", 'fail_type': "domain_parameter_mismatch", 'arg': variable_map[var_id]}
+                    return False, feedback_str, fail_dict
 
         # variable map is filled during parameter checking
         # print("variable_map pre-preconditions:", variable_map)
@@ -1852,10 +1793,10 @@ class AdventureIFInterpreter(GameResourceLocator):
 
         # if checked_conditions:
         if self.precon_trace[-1]['checks_out']:
-            print("Preconditions fulfilled!")
+            logger.info("Preconditions fulfilled!")
             pass
         else:
-            print("Preconditions not fulfilled!")
+            logger.info("Preconditions not fulfilled!")
 
             # NOTE: The first precondition fact that does not check out is used for feedback. This means that the order
             # of predicates (and clauses) in the precondition PDDL for the action determines feedback priority!
@@ -1877,27 +1818,26 @@ class AdventureIFInterpreter(GameResourceLocator):
                                         if not and_item['checks_out']:
                                             # print("or and_item does not check out:", and_item)
                                             feedback_idx = and_item['precon_idx']
-                                            return feedback_idx
+                                            return feedback_idx, and_item
                                 elif 'predicate_tuple' in or_item:
                                     if not or_item['checks_out']:
                                         feedback_idx = or_item['precon_idx']
-                                        return feedback_idx
+                                        return feedback_idx, or_item
                         elif 'and' in item:
                             for and_item in item['and']:
                                 if not and_item['checks_out']:
                                     # print("or and_item does not check out:", and_item)
                                     feedback_idx = and_item['precon_idx']
-                                    return feedback_idx
+                                    return feedback_idx, and_item
                         elif 'predicate_tuple' in item:
                             if not item['checks_out']:
                                 feedback_idx = item['precon_idx']
-                                return feedback_idx
+                                return feedback_idx, item
 
             # TODO?: Make feedback_idx extraction from precon_trace recursive for optimal robustness?
 
-            feedback_idx = feedback_idx_from_precon_trace(self.precon_trace)
+            feedback_idx, failed_precon_predicate = feedback_idx_from_precon_trace(self.precon_trace)
 
-            # feedback_template = cur_action_def['failure_feedback']['precondition'][self.precon_idx]
             feedback_template = cur_action_def['failure_feedback']['precondition'][feedback_idx]
 
             feedback_jinja = jinja2.Template(feedback_template)
@@ -1911,7 +1851,9 @@ class AdventureIFInterpreter(GameResourceLocator):
             feedback_str = feedback_str.capitalize()
             # print("fail:", feedback_str)
 
-            return False, feedback_str, {}
+            fail_dict: dict = {'phase': "resolution", 'fail_type': "precondition_fail", 'arg': failed_precon_predicate}
+
+            return False, feedback_str, fail_dict
 
         # print("variable_map post-preconditions:", variable_map)
 
@@ -1939,7 +1881,7 @@ class AdventureIFInterpreter(GameResourceLocator):
                 world_state_effects['added'] += resolve_effect_results['added']
                 world_state_effects['removed'] += resolve_effect_results['removed']
 
-        print("world_state_effects:", world_state_effects)
+        # print("world_state_effects:", world_state_effects)
 
         # print("World state after effects:", self.world_state)
 
@@ -2005,6 +1947,7 @@ class AdventureIFInterpreter(GameResourceLocator):
             # RESOLUTION PHASE
             # get visible/accessible entities before resolution:
             prior_visibles = set(self.get_player_room_contents_visible())
+
             # resolve action:
             resolved, resolution_result, fail = self.resolve_action(parse_result)
             if not resolved:
@@ -2062,7 +2005,21 @@ class AdventureIFInterpreter(GameResourceLocator):
                 else:  # 'go' feedback with description of newly entered room:
                     return goals_achieved_response, base_result_str, {}
                 """
-                return goals_achieved_response, base_result_str, {}
+                # successful action returns extra information instead of failure information:
+                extra_action_info = dict()
+
+                # get epistemic/pragmatic info for action:
+                action_epistemic_pragmatic = {'epistemic': self.action_types[parse_result['type']]['epistemic'],
+                                              'pragmatic': self.action_types[parse_result['type']]['pragmatic']}
+                # print(action_epistemic_pragmatic)
+
+                extra_action_info['epist_pragma'] = action_epistemic_pragmatic
+
+                # handle DONE action:
+                if parse_result['type'] == "done":
+                    extra_action_info['done_action'] = True
+
+                return goals_achieved_response, base_result_str, extra_action_info
 
     def execute_optimal_solution(self):
         """
