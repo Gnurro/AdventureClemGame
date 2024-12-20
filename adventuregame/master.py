@@ -81,7 +81,8 @@ class AdventureGameMaster(DialogueGameMaster):
                 return False
             if self.if_variant == 'plan':
                 # check rule: response must contain 'Next actions:' on its own line
-                if "\nNext actions:" not in utterance:
+                # if utterance is DONE action, don't fail
+                if "\nNext actions:" not in utterance and "done" not in utterance:
                     self.success = False
                     self.invalid_format = "next_actions_missing"
                     return False
@@ -166,6 +167,8 @@ class AdventureGameMaster(DialogueGameMaster):
             if 'fail_type' in action_info:
                 # record failure dict for scoring:
                 self.log_to_self("action_fail", action_info)  # can be JSON'd; for easier eval
+            else:
+                self.log_to_self("action_info", action_info)
 
             # catch DONE action to end game after this turn:
             if 'done_action' in action_info:
@@ -173,8 +176,8 @@ class AdventureGameMaster(DialogueGameMaster):
                 self.log_to_self("model_done", if_input)
                 self.model_done = True
 
-            if 'epist_pragma' in action_info:
-                self.log_to_self("epistemic_pragmatic", action_info['epist_pragma'])
+            # if 'epist_pragma' in action_info:
+            #    self.log_to_self("action_info", action_info)
 
             # handle goals:
             self.goals_achieved = goals_achieved

@@ -474,6 +474,11 @@ class AdventureIFInterpreter(GameResourceLocator):
 
         self.initialize_action_parsing(print_lark_grammar=verbose)
 
+        self.exploration_history = list()
+        self.exploration_state = set()
+        # start tracking exploration:
+        self.track_exploration()
+
     def initialize_entity_types(self):
         """
         Load and process entity types in this adventure.
@@ -1122,6 +1127,100 @@ class AdventureIFInterpreter(GameResourceLocator):
                 # TODO?: room description?
 
         return " ".join(entity_desc_list)
+
+    def get_current_perceived(self) -> set:
+        current_perceived: set = set()
+
+        # get player room at fact
+        for fact in self.world_state:
+            if fact[0] == 'at' and fact[1] == 'player1':
+                current_perceived.add(fact)
+
+        visible_room_contents = self.get_player_room_contents_visible()
+        for fact in self.world_state:
+            if fact[1] in visible_room_contents and fact[0] in ("open", "closed", "at", "in", "on"):
+                current_perceived.add(fact)
+
+        inventory_content = self.get_inventory_content()
+        for fact in self.world_state:
+            if fact[1] in inventory_content and fact[0] in ("at", "in"):
+                current_perceived.add(fact)
+
+        # current_room_exits = self.get_player_room_exits()
+        for fact in self.world_state:
+            # if fact[0] == "exit" and fact[1] in current_room_exits:
+            if fact[0] == "exit" and fact[1] == self.get_player_room():
+                current_perceived.add(fact)
+
+        # logger.info(f"current_perceived: {current_perceived}")
+
+        return current_perceived
+
+    def track_exploration(self, world_state_effects: dict = None):
+        """Track exploration of the world state.
+        Updates the exploration state with what the player perceives at the current turn and records it.
+        """
+        # logger.info(f"len(self.exploration_history): {len(self.exploration_history)}")
+
+        if len(self.exploration_history) >= 1:
+            # logger.info("len(self.exploration_history) >= 2")
+
+            current_perceived: set = self.get_current_perceived()
+            prior_known: set = self.exploration_history[-1]
+            # logger.info(f"prior_known: {prior_known}")
+
+            # changes:
+            current_set_difference = current_perceived.difference(prior_known)  # newly perceived
+            # logger.info(f"current_set_difference: {current_set_difference}")
+            prior_set_difference = prior_known.difference(current_perceived)  # perceived before
+            # logger.info(f"prior_set_difference: {prior_set_difference}")
+
+            # not changed:
+            current_set_intersect = current_perceived.intersection(prior_known)
+            # logger.info(f"current_set_intersect: {current_set_intersect}")
+
+            # logger.info(f"Exploration state before update: {self.exploration_state}")
+            self.exploration_state = self.exploration_state.union(current_set_difference)
+            # self.exploration_state = self.exploration_state.union(current_set_difference).difference(prior_set_difference)
+            # logger.info(f"Exploration state after update: {self.exploration_state}")
+
+            new_exploration_state_difference = self.exploration_state.difference(prior_known)
+            # logger.info(f"new_exploration_state_difference: {new_exploration_state_difference}")
+
+            # logger.info(f"Action resolution world_state_effects: {world_state_effects}")
+            """
+            for added_fact in world_state_effects['added']:
+                if added_fact in self.exploration_state:
+                    logger.info(f"Added fact {added_fact} is in exploration state.")
+                else:
+                    logger.info(f"Added fact {added_fact} NOT in exploration state!")
+            for removed_fact in world_state_effects['removed']:
+                if removed_fact in self.exploration_state:
+                    logger.info(f"Removed fact {removed_fact} IS in exploration state!")
+                else:
+                    logger.info(f"Removed fact {removed_fact} not in exploration state.")
+            """
+            # remove facts from exploration state based on just-performed action:
+            # NOTE: This is done this way to assure that actions like GO don't result in 'loss of exploration' as using
+            # set operations would
+            if world_state_effects:
+                for removed_fact in world_state_effects['removed']:
+                    # logger.info(f"Removing fact {removed_fact} from exploration state.")
+                    self.exploration_state.remove(removed_fact)
+                    # logger.info(f"Fact {removed_fact} in exploration state: {removed_fact in self.exploration_state}")
+
+            logger.info(f"Current exploration_state: {self.exploration_state}")
+            # record current exploration state:
+            self.exploration_history.append(deepcopy(self.exploration_state))
+            # logger.info(f"Current exploration_history: {self.exploration_history}")
+
+        # record initial exploration state:
+        if not self.exploration_state:
+            logger.info("Recording initial exploration state.")
+            self.exploration_state = self.get_current_perceived()
+            self.exploration_history.append(self.exploration_state)
+
+
 
     def parse_action_input(self, action_input: str) -> [bool, Union[dict, str], Union[dict, Set]]:
         """
@@ -1888,8 +1987,6 @@ class AdventureIFInterpreter(GameResourceLocator):
             feedback_str = feedback_str.capitalize()
             # print("fail:", feedback_str)
 
-            # TODO: improve returned fail_dict content for better 'scoring'; add attempted action
-
             failed_action_info = {'failed_action_type': action_dict['type'],
                                   'failed_precon_predicate': failed_precon_predicate}
 
@@ -1989,7 +2086,7 @@ class AdventureIFInterpreter(GameResourceLocator):
 
         # print("feedback_str:", feedback_str)
 
-        return True, feedback_str, {}
+        return True, feedback_str, {'world_state_effects': world_state_effects}
 
     def process_action(self, action_input: str):
         """
@@ -1999,6 +2096,7 @@ class AdventureIFInterpreter(GameResourceLocator):
         # PARSING PHASE
         parsed, parse_result, fail = self.parse_action_input(action_input)
         if not parsed:
+            self.track_exploration()
             return self.goals_achieved, parse_result, fail
         else:
             # RESOLUTION PHASE
@@ -2008,6 +2106,7 @@ class AdventureIFInterpreter(GameResourceLocator):
             # resolve action:
             resolved, resolution_result, fail = self.resolve_action(parse_result)
             if not resolved:
+                self.track_exploration()
                  # get epistemic/pragmatic info for action:
                 action_epistemic_pragmatic = {'epistemic': self.action_types[parse_result['type']]['epistemic'],
                                               'pragmatic': self.action_types[parse_result['type']]['pragmatic']}
@@ -2019,27 +2118,6 @@ class AdventureIFInterpreter(GameResourceLocator):
             else:
                 logger.info(f"Resolution result: {resolution_result}")
                 base_result_str = resolution_result
-                """
-                # get action feedback template:
-                feedback_template = self.action_types[parse_result['type']]['feedback_template']
-                feedback_jinja = jinja2.Template(feedback_template)
-                template_tags = ["thing", "inventory_desc", "prep", "target", "room_desc"]
-                jinja_args = dict()
-                for template_tag in template_tags:
-                    if template_tag in feedback_template:
-                        if template_tag == "thing":
-                            jinja_args[template_tag] = self._get_inst_str(resolution_result[1])
-                        if template_tag == "inventory_desc":
-                            jinja_args[template_tag] = self.get_inventory_desc()
-                        if template_tag == "prep":
-                            jinja_args[template_tag] = resolution_result[0]
-                        if template_tag == "target":
-                            jinja_args[template_tag] = self._get_inst_str(resolution_result[2])
-                        if template_tag == "room_desc":
-                            jinja_args[template_tag] = self.get_full_room_desc()
-                # fill feedback template:
-                base_result_str = feedback_jinja.render(jinja_args)
-                """
 
                 # check goal achievement:
                 self.goals_achieved = self.goal_state & self.world_state
@@ -2049,28 +2127,14 @@ class AdventureIFInterpreter(GameResourceLocator):
                     goals_achieved_response[goal_state_idx] = fact_tuple_to_str(goal_state)
                 goals_achieved_response = set(goals_achieved_response)
 
-                # TODO: Check if new visibles change feedback in resolve_action covers what was done below:
-                """
-                # check for newly visible/accessible entities:
-                post_visibles = set(self.get_player_room_contents_visible())
-                changed_visibles = post_visibles.difference(prior_visibles)
-                # feedback on newly visible/accessible entities in current room:
-                if changed_visibles and not parse_result['type'] == "go":
-                    visible_content_state_strs = list()
-                    for thing in changed_visibles:
-                        for fact in self.world_state:
-                            if fact[0] == 'in' and fact[1] == thing:
-                                visible_content_state_strs.append(f"There is a {self._get_inst_str(thing)} in the {self._get_inst_str(fact[2])}.")
-                    visible_content_state_combined = " ".join(visible_content_state_strs)
-                    if visible_content_state_combined:
-                        visible_content_state_combined = " " + visible_content_state_combined
-                    return goals_achieved_response, f"{base_result_str}{visible_content_state_combined}", {}
-                
-                else:  # 'go' feedback with description of newly entered room:
-                    return goals_achieved_response, base_result_str, {}
-                """
                 # successful action returns extra information instead of failure information:
                 extra_action_info = dict()
+
+                extra_action_info['action_type'] = parse_result['type']
+
+                # EXPLORATION TRACKING
+                self.track_exploration(fail['world_state_effects'])
+                extra_action_info['exploration_state'] = list(self.exploration_state)
 
                 # get epistemic/pragmatic info for action:
                 action_epistemic_pragmatic = {'epistemic': self.action_types[parse_result['type']]['epistemic'],
@@ -2078,6 +2142,20 @@ class AdventureIFInterpreter(GameResourceLocator):
                 # print(action_epistemic_pragmatic)
 
                 extra_action_info['epist_pragma'] = action_epistemic_pragmatic
+
+                # TODO: check epistemic gain to differentiate 'truly epistemic' actions
+
+                epistemic_gain_removed = self.exploration_history[-2].difference(self.exploration_state)
+                epistemic_gain_added = self.exploration_state.difference(self.exploration_history[-2])
+                logger.info(f"Epistemic gain; Added: {epistemic_gain_added}; Removed: {epistemic_gain_removed}")
+
+                # TODO?: differentiate between 'self-made' epistemic gain like from TAKE from true exploration as from GO?
+
+                if action_epistemic_pragmatic['epistemic']:
+                    true_epistemic_gain = epistemic_gain_added
+                    logger.info(f"Epistemic action {parse_result['type']} resulted in epistemic gain: {true_epistemic_gain}")
+
+                # TODO?: track 'known entities'?
 
                 # handle DONE action:
                 if parse_result['type'] == "done":
@@ -2136,11 +2214,11 @@ class AdventureIFInterpreter(GameResourceLocator):
             logger.info(f"Plan world state change count: {world_state_change_count}; reverting changes")
             # deepcopy world state after plan execution to prevent reference issues:
             post_plan_world_state = deepcopy(self.world_state)
-            logger.info(f"World state history before reverting: {self.world_state_history}")
+            # logger.info(f"World state history before reverting: {self.world_state_history}")
             logger.info(f"World state history length before reverting: {len(self.world_state_history)}")
             # reset world state history to before executed plan:
             self.world_state_history = self.world_state_history[:-world_state_change_count]
-            logger.info(f"World state history after reverting: {self.world_state_history}")
+            # logger.info(f"World state history after reverting: {self.world_state_history}")
             logger.info(f"World state history length after reverting: {len(self.world_state_history)}")
             # check that world state has been properly reset:
             if self.world_state_history[-1] == pre_plan_world_state:
@@ -2161,6 +2239,9 @@ class AdventureIFInterpreter(GameResourceLocator):
             # log specific reverted fact changes from plan:
             post_plan_changes = post_plan_world_state.difference(self.world_state)
             logger.info(f"Reverted plan world state changes: {post_plan_changes}")
+
+            # TODO: revert exploration state as well
+
         else:
             logger.info(f"Plan world state change count: {world_state_change_count}; no changes to revert")
 
@@ -2175,8 +2256,8 @@ if __name__ == "__main__":
     game_instance_exmpl = {"game_id": 11, "variant": "basic",
      "prompt": "You are playing a text adventure game. I will describe what you can perceive in the game. You write the single action you want to take in the game starting with >. Only reply with actions.\nFor example:\n> examine cupboard\n\nYour goal for this game is: Put the book on the table, the plate on the table and the mop on the table.\n\n",
      "initial_state": ["at(kitchen1floor,kitchen1)", "at(pantry1floor,pantry1)", "at(hallway1floor,hallway1)",
-                       "at(livingroom1floor,livingroom1)", "at(broomcloset1floor,broomcloset1)",
-                       "at(bedroom1floor,bedroom1)", "at(table1,livingroom1)", "at(sidetable1,livingroom1)",
+                       "at(livingroom1floor1,livingroom1)", "at(broomcloset1floor1,broomcloset1)",
+                       "at(bedroom1floor1,bedroom1)", "at(table1,livingroom1)", "at(sidetable1,livingroom1)",
                        "at(counter1,kitchen1)", "at(refrigerator1,pantry1)", "at(cupboard1,kitchen1)",
                        "at(wardrobe1,bedroom1)", "at(shelf1,livingroom1)", "at(freezer1,pantry1)",
                        "at(pottedplant1,hallway1)", "at(chair1,livingroom1)", "at(bed1,bedroom1)",
@@ -2184,8 +2265,8 @@ if __name__ == "__main__":
                        "at(sandwich1,pantry1)", "at(apple1,pantry1)", "at(banana1,pantry1)", "at(orange1,pantry1)",
                        "at(peach1,pantry1)", "at(plate1,kitchen1)", "at(book1,livingroom1)", "at(pillow1,bedroom1)",
                        "at(player1,bedroom1)", "type(kitchen1floor,floor)", "type(pantry1floor,floor)",
-                       "type(hallway1floor,floor)", "type(livingroom1floor,floor)", "type(broomcloset1floor,floor)",
-                       "type(bedroom1floor,floor)", "type(player1,player)", "type(table1,table)",
+                       "type(hallway1floor1,floor)", "type(livingroom1floor1,floor)", "type(broomcloset1floor1,floor)",
+                       "type(bedroom1floor1,floor)", "type(player1,player)", "type(table1,table)",
                        "type(sidetable1,sidetable)", "type(counter1,counter)", "type(refrigerator1,refrigerator)",
                        "type(cupboard1,cupboard)", "type(wardrobe1,wardrobe)", "type(shelf1,shelf)",
                        "type(freezer1,freezer)", "type(pottedplant1,pottedplant)", "type(chair1,chair)",
@@ -2194,11 +2275,11 @@ if __name__ == "__main__":
                        "type(peach1,peach)", "type(plate1,plate)", "type(book1,book)", "type(pillow1,pillow)",
                        "room(kitchen1,kitchen)", "room(pantry1,pantry)", "room(hallway1,hallway)",
                        "room(livingroom1,livingroom)", "room(broomcloset1,broomcloset)", "room(bedroom1,bedroom)",
-                       "support(kitchen1floor)", "support(pantry1floor)", "support(hallway1floor)",
-                       "support(livingroom1floor)", "support(broomcloset1floor)", "support(bedroom1floor)",
+                       "support(kitchen1floor1)", "support(pantry1floor1)", "support(hallway1floor1)",
+                       "support(livingroom1floor1)", "support(broomcloset1floor1)", "support(bedroom1floor1)",
                        "support(table1)", "support(sidetable1)", "support(counter1)", "support(shelf1)",
                        "support(bed1)", "on(book1,sidetable1)", "on(plate1,kitchen1floor)",
-                       "on(mop1,broomcloset1floor)", "on(broom1,broomcloset1floor)", "on(pottedplant1,hallway1floor)",
+                       "on(mop1,broomcloset1floor1)", "on(broom1,broomcloset1floor1)", "on(pottedplant1,hallway1floor1)",
                        "container(refrigerator1)", "container(cupboard1)", "container(wardrobe1)",
                        "container(freezer1)", "in(pillow1,wardrobe1)", "in(peach1,refrigerator1)",
                        "in(orange1,refrigerator1)", "in(banana1,refrigerator1)", "in(apple1,refrigerator1)",
@@ -2225,8 +2306,9 @@ if __name__ == "__main__":
                           ["put", "mop1", "table1"]],
      "optimal_commands": ["go living room", "put book on table", "go kitchen", "take plate", "go living room",
                           "put plate on table", "go hallway", "go broom closet", "take mop", "go hallway",
-                          "go living room", "put mop on table"], "action_definitions": ["basic_actions.json"],
-     "room_definitions": ["home_rooms.json"], "entity_definitions": ["home_entities.json"]}
+                          "go living room", "put mop on table"], "action_definitions": ["basic_actions_v2.json"],
+     "room_definitions": ["home_rooms.json"], "entity_definitions": ["home_entities.json"],
+                           "domain_definitions":["home_domain.json"]}
     # initialize test interpreter:
     test_interpreter = AdventureIFInterpreter(game_instance_exmpl)
     # run optimal solution:
