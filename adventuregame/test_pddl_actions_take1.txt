@@ -3,7 +3,6 @@
     :precondition (and
         (at ?p ?r)
         (at ?e ?r)
-        (not (in ?e inventory))
         (at ?s ?r)
         (accessible ?e)
         (or

@@ -756,6 +756,11 @@ class AdventureIFInterpreter(GameResourceLocator):
     def _get_inst_str(self, inst) -> str:
         """
         Get a full string representation of an entity or room instance with adjectives.
+        Args:
+            inst: The object instance ID of the object instance to get the surface string representation for.
+                Ex: 'apple1', 'livingroom1'
+        Returns:
+            Full surface string representation of the object instance. Ex: 'red apple', 'living room'
         """
         inst_adjs = list()
         # get instance adjectives from adj facts:
@@ -1200,6 +1205,9 @@ class AdventureIFInterpreter(GameResourceLocator):
             if action_dict['type'] == "take":
                 # handle unnecessary inventory interaction:
                 if action_dict['arg2'] == "inventory":
+                    # TODO: remove 'taking from inventory', now handled via PDDL precondition
+                    #  but PDDL handling does it via precondition (not (in <item> inventory)), not by checing for the
+                    #  second argument, so check if this handling here might still be useful
                     logger.info("Taking from inventory")
                     # get inventory content:
                     inventory_content = self.get_inventory_content()
@@ -1668,6 +1676,9 @@ class AdventureIFInterpreter(GameResourceLocator):
         facts_to_remove = list()  # facts to be removed by world state set removal
         facts_to_add = list()  # facts to union with world state fact set
 
+        # deepcopy the world state to prevent referential interaction:
+        prior_world_state = deepcopy(self.world_state)
+
         # get current action definition:
         cur_action_def = self.action_types[action_dict['type']]
         # print("cur_action_def:", cur_action_def)
@@ -1865,14 +1876,24 @@ class AdventureIFInterpreter(GameResourceLocator):
             # fill feedback template:
             clean_feedback_variable_map = deepcopy(variable_map)
             for key in clean_feedback_variable_map:
-                while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
-                    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+
+                # while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                #    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+
+                if clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                    clean_feedback_variable_map[key] = self._get_inst_str(clean_feedback_variable_map[key])
+
             jinja_args = clean_feedback_variable_map
             feedback_str = feedback_jinja.render(jinja_args)
             feedback_str = feedback_str.capitalize()
             # print("fail:", feedback_str)
 
-            fail_dict: dict = {'phase': "resolution", 'fail_type': "precondition_fail", 'arg': failed_precon_predicate}
+            # TODO: improve returned fail_dict content for better 'scoring'; add attempted action
+
+            failed_action_info = {'failed_action_type': action_dict['type'],
+                                  'failed_precon_predicate': failed_precon_predicate}
+
+            fail_dict: dict = {'phase': "resolution", 'fail_type': "precondition_fail", 'arg': failed_action_info}
 
             return False, feedback_str, fail_dict
 
@@ -1906,14 +1927,29 @@ class AdventureIFInterpreter(GameResourceLocator):
 
         # print("World state after effects:", self.world_state)
 
+        # add deepcopy of new current world state to world state history:
+        self.world_state_history.append(deepcopy(self.world_state))
+
+        # get all changed facts:
+        post_world_state = deepcopy(self.world_state)
+        post_resolution_changes = post_world_state.difference(prior_world_state)
+        if prior_world_state == self.world_state_history[-2]:
+            logger.info(f"Prior world state matches second to last world state in history")
+        logger.info(f"Resolution world state changes: {post_resolution_changes}")
+
+
         # SUCCESS FEEDBACK
 
         # type word variable map instead of instance ID:
         clean_feedback_variable_map = deepcopy(variable_map)
         for key in clean_feedback_variable_map:
             if clean_feedback_variable_map[key]:
-                while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
-                    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+
+                # while clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                #    clean_feedback_variable_map[key] = clean_feedback_variable_map[key][:-1]
+
+                if clean_feedback_variable_map[key].endswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")):
+                    clean_feedback_variable_map[key] = self._get_inst_str(clean_feedback_variable_map[key])
 
         success_feedback_template = cur_action_def['success_feedback']
         # print("success_feedback_template:", success_feedback_template)
@@ -1972,6 +2008,13 @@ class AdventureIFInterpreter(GameResourceLocator):
             # resolve action:
             resolved, resolution_result, fail = self.resolve_action(parse_result)
             if not resolved:
+                 # get epistemic/pragmatic info for action:
+                action_epistemic_pragmatic = {'epistemic': self.action_types[parse_result['type']]['epistemic'],
+                                              'pragmatic': self.action_types[parse_result['type']]['pragmatic']}
+                # print(action_epistemic_pragmatic)
+                # add to fail info dict:
+                fail['epist_pragma'] = action_epistemic_pragmatic
+
                 return self.goals_achieved, resolution_result, fail
             else:
                 logger.info(f"Resolution result: {resolution_result}")
@@ -2077,7 +2120,8 @@ class AdventureIFInterpreter(GameResourceLocator):
             result_sequence.append(result)
             # check for command failure:
             # result[2] is fail info; if it is truthy, the command failed
-            if result[2]:
+            # if result[2]:
+            if 'fail_type' in result[2]:
                 # stop executing commands at the first failure
                 logger.info(f"Plan sequence failed at step {cmd_idx}")
                 logger.info(f"Plan sequence fail dict: {result[2]}")
