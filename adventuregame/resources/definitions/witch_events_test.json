@@ -1,8 +1,0 @@
-[
-  {
-    "type_name": "toad_eats_beetle",
-    "pddl": "(:event TOAD-EATS-BEETLE\n    :parameters (?t - toad ?b - beetle ?r - room ?c - container)\n    :precondition (and\n        (at ?t ?r)\n        (at ?b ?r)\n        (or\n            (not (in ?b ?c))\n            (and\n                (at ?c ?r)\n                (in ?b ?c)\n                (open ?c)\n                )\n            )\n        (not (in ?b inventory))\n        (hungry ?t)\n        )\n    :effect (and\n        (not (at ?b ?r))\n        (not (hungry ?t))\n        )\n    )",
-    "event_feedback": "The {{ t }} ambles over to the {{ b }} and swallows it with one big gulp.",
-    "asp": ""
-  }
-]

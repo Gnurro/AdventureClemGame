@@ -1,3 +1,0 @@
-{ action_t(TURN,dump,THING,TARGET):at_t(TURN,THING,ROOM),at_t(TURN,player1,ROOM),at_t(TURN,TARGET,ROOM),bucket(THING),container(TARGET) } 1 :- turn(TURN), at_t(TURN,player1,ROOM), not turn_limit(TURN).
-in_t(TURN+1,water1,TARGET) :- turn(TURN), action_t(TURN,dump,THING,TARGET), type(THING,waterbucket), container(TARGET).
-in_t(TURN+1,ectoplams1,TARGET) :- turn(TURN), action_t(TURN,dump,THING,TARGET), type(THING,plasmbucket), container(TARGET).

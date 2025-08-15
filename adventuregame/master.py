@@ -676,4 +676,4 @@ class AdventureGameBenchmark(GameBenchmark):
 
 def main():
     game_path = os.path.dirname(os.path.abspath(__file__))
-    experiments = file_utils.load_json("in/instances.json", game_path)
+    experiments = file_utils.load_json("in/instances_v3.0.json", game_path)

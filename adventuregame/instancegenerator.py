@@ -395,17 +395,11 @@ class AdventureGameInstanceGenerator(GameInstanceGenerator):
 
 if __name__ == '__main__':
     # The resulting instances.json is automatically saved to the "in" directory of the game folder
-    # AdventureGameInstanceGenerator().generate(raw_adventures_files=["generated_new-words_created_adventures"])
-    """
     AdventureGameInstanceGenerator().generate(raw_adventures_files=[
         "curated_home_deliver_three_adventures_v2_2_a",
         "generated_new-words_home-delivery_easy_adventures",
         "generated_new-words_home-delivery_medium_adventures",
-        "generated_new-words_created_adventures"],
-        variants=["basic", "basic_preexplore", "planning", "planning_preexplore", "basic_invlimit", "planning_invlimit"]
-    )
-    """
-    AdventureGameInstanceGenerator().generate(raw_adventures_files=[
+        "generated_new-words_created_adventures",
         "generated_potion_brewing_adventures"],
-        variants=["basic"]
+        variants=["basic", "basic_preexplore", "basic_invlimit"]
     )

@@ -1,6 +1,6 @@
 import json
 
-with open("curated_home_deliver_three_adventures_v2.json") as infile:
+with open("curated_home_deliver_three_adventures_v2_2_a.json") as infile:
     curated_adventures = json.load(infile)
 
 # print(curated_adventures)

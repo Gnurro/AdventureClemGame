@@ -1,8 +1,0 @@
-(:action DONE
-    :parameters (?p - player ?r - room)
-    :precondition (and
-        (at ?p ?r)
-        )
-    :effect (and
-    )
-)
