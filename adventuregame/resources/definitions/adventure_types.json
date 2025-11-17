@@ -29,10 +29,10 @@
     },
     "task_config": {
       "task": "deliver",
-      "deliver_to_floor": false,
-      "difficulty": "easy"
+      "deliver_to_floor": false
     },
     "goal_count": 3,
+    "difficulty": "easy",
     "mutable_fact_types": ["at", "in", "on", "closed", "open"],
     "optimal_solver_turn_limit": 50,
     "min_optimal_turns": 5,
@@ -52,9 +52,12 @@
     "task_config": {
       "task": "deliver",
       "deliver_to_floor": false,
-      "difficulty": "hard"
+      "hidden_deliverables": true,
+      "different_room_delivery": true,
+      "different_delivery_targets": true
     },
     "goal_count": 3,
+    "difficulty": "hard",
     "mutable_fact_types": ["at", "in", "on", "closed", "open"],
     "optimal_solver_turn_limit": 50,
     "min_optimal_turns": 5,
@@ -160,6 +163,7 @@
       "no_pre_explore": true
     },
     "goal_count": 1,
+    "difficulty": "hard",
     "mutable_fact_types": ["open", "closed", "at", "in", "on", "cold", "hot"],
     "optimal_solver_turn_limit": 50,
     "min_optimal_turns": 5,
